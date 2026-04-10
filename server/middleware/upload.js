@@ -11,6 +11,8 @@ const createDirectories = () => {
     './uploads/thumbnails',
     './uploads/avatars',
     './uploads/badges',
+    './uploads/assignments',
+    './uploads/reading',
     './uploads/temp'
   ];
 
@@ -57,8 +59,9 @@ const imageStorage = multer.diskStorage({
 
 // File filter
 const fileFilter = (req, file, cb) => {
-  const allowedVideoTypes = process.env.ALLOWED_VIDEO_TYPES.split(',');
-  const allowedImageTypes = process.env.ALLOWED_IMAGE_TYPES.split(',');
+  const allowedVideoTypes = (process.env.ALLOWED_VIDEO_TYPES || 'video/mp4,video/mpeg,video/quicktime').split(',');
+  const allowedImageTypes = (process.env.ALLOWED_IMAGE_TYPES || 'image/jpeg,image/png,image/gif,image/webp').split(',');
+  const allowedDocumentTypes = (process.env.ALLOWED_DOCUMENT_TYPES || 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png,image/jpeg,image/jpg').split(',');
 
   if (file.fieldname === 'video') {
     if (allowedVideoTypes.includes(file.mimetype)) {
@@ -71,6 +74,12 @@ const fileFilter = (req, file, cb) => {
       cb(null, true);
     } else {
       cb(new Error('Invalid image format. Only JPEG, PNG, GIF, and WebP are allowed.'), false);
+    }
+  } else if (file.fieldname === 'attachment' || file.fieldname === 'reading') {
+    if (allowedDocumentTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid document format. Upload PDF, DOC, DOCX, etc.'), false);
     }
   } else {
     cb(new Error('Unexpected file field'), false);
@@ -96,10 +105,46 @@ const uploadAvatar = multer({
   fileFilter: fileFilter
 });
 
+const assignmentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, './uploads/assignments/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname) || '';
+    cb(null, `assignment-${uniqueSuffix}${ext}`);
+  }
+});
+
+const uploadAssignment = multer({
+  storage: assignmentStorage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB cap for docs
+  fileFilter: fileFilter
+});
+
+const readingStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, './uploads/reading/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname) || '';
+    cb(null, `reading-${uniqueSuffix}${ext}`);
+  }
+});
+
+const uploadReading = multer({
+  storage: readingStorage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: fileFilter
+});
+
 const combinedStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (file.fieldname === 'video') {
       cb(null, './uploads/videos/');
+    } else if (file.fieldname === 'reading') {
+      cb(null, './uploads/reading/');
     } else {
       cb(null, './uploads/thumbnails/');
     }
@@ -117,9 +162,9 @@ const uploadMultiple = multer({
   fileFilter: fileFilter
 }).fields([
   { name: 'video', maxCount: 1 },
-  { name: 'thumbnail', maxCount: 1 }
+  { name: 'thumbnail', maxCount: 1 },
+  { name: 'reading', maxCount: 1 }
 ]);
-
 
 // Image optimization middleware
 const optimizeImage = async (req, res, next) => {
@@ -141,8 +186,10 @@ const optimizeImage = async (req, res, next) => {
     }
 
     // Replace original with optimized
-    fs.unlinkSync(filePath);
-    fs.renameSync(optimizedPath, filePath);
+    if (fs.existsSync(optimizedPath)) {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      fs.renameSync(optimizedPath, filePath);
+    }
 
     next();
   } catch (error) {
@@ -158,13 +205,18 @@ const handleUploadError = (err, req, res, next) => {
     }
     return res.status(400).json({ message: err.message });
   }
-  next(err);
+  if (err) {
+    return res.status(400).json({ message: err.message });
+  }
+  next();
 };
 
 module.exports = {
   uploadVideo,
   uploadImage,
   uploadAvatar,
+  uploadAssignment,
+  uploadReading,
   uploadMultiple,
   optimizeImage,
   handleUploadError

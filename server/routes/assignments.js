@@ -99,6 +99,10 @@ const normalizeAssignmentPayload = (body = {}, { isUpdate = false } = {}) => {
     payload.status = status;
   }
 
+  if (body.attachmentUrl !== undefined) {
+    payload.attachmentUrl = body.attachmentUrl ? String(body.attachmentUrl).trim() : null;
+  }
+
   return { payload };
 };
 
@@ -106,9 +110,7 @@ const normalizeAssignmentPayload = (body = {}, { isUpdate = false } = {}) => {
 router.get('/', protect, async (req, res) => {
   try {
     let where = {};
-    if (req.user.role === 'teacher') {
-      where.teacherId = req.user.id;
-    } else if (req.user.role === 'student') {
+    if (req.user.role === 'student') {
       let userGradeId = req.user.GradeId || null;
       if (!userGradeId && req.user.grade) {
         const grade = await Grade.findOne({ where: { level: req.user.grade }, attributes: ['id'] });
@@ -208,10 +210,6 @@ router.put('/:id', protect, authorize('teacher', 'admin'), async (req, res) => {
       return res.status(404).json({ message: 'Assignment not found' });
     }
 
-    if (req.user.role === 'teacher' && assignment.teacherId !== req.user.id) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
     const { payload, error } = normalizeAssignmentPayload(req.body, { isUpdate: true });
     if (error) {
       return res.status(400).json({ message: error });
@@ -249,10 +247,6 @@ router.get('/:id/submissions', protect, authorize('teacher', 'admin'), async (re
     const assignment = await Assignment.findByPk(req.params.id);
     if (!assignment) {
       return res.status(404).json({ message: 'Assignment not found' });
-    }
-
-    if (req.user.role === 'teacher' && assignment.teacherId !== req.user.id) {
-      return res.status(403).json({ message: 'Access denied' });
     }
 
     const submissions = await Submission.findAll({
@@ -319,14 +313,6 @@ router.put('/submissions/:submissionId/grade', protect, authorize('teacher', 'ad
       include: [{ model: Assignment, attributes: ['id', 'teacherId'] }]
     });
     if (!submission) return res.status(404).json({ message: 'Submission not found' });
-
-    if (
-      req.user.role === 'teacher' &&
-      submission.Assignment &&
-      submission.Assignment.teacherId !== req.user.id
-    ) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
 
     const numericGrade = Number(grade);
     if (Number.isNaN(numericGrade) || numericGrade < 0 || numericGrade > 100) {

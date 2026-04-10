@@ -84,6 +84,7 @@ const SubmissionsList = () => {
               <TableRow>
                 <TableCell sx={{ color: 'white' }}>Student</TableCell>
                 <TableCell sx={{ color: 'white' }}>Submitted Date</TableCell>
+                <TableCell sx={{ color: 'white' }}>Attachment</TableCell>
                 <TableCell sx={{ color: 'white' }}>Status</TableCell>
                 <TableCell sx={{ color: 'white' }}>Grade</TableCell>
                 <TableCell align="right" sx={{ color: 'white' }}>Actions</TableCell>
@@ -102,12 +103,21 @@ const SubmissionsList = () => {
                     </Box>
                   </TableCell>
                   <TableCell>{new Date(sub.submittedAt).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={sub.status} 
-                      size="small" 
-                      color={sub.status === 'graded' ? 'success' : 'warning'} 
-                    />
+                <TableCell>
+                  {sub.fileUrl ? (
+                    <Button size="small" variant="text" onClick={() => window.open(sub.fileUrl, '_blank')}>
+                      Open
+                    </Button>
+                  ) : (
+                    <Typography variant="body2" color="textSecondary">—</Typography>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={sub.status} 
+                    size="small" 
+                    color={sub.status === 'graded' ? 'success' : 'warning'} 
+                  />
                   </TableCell>
                   <TableCell>{sub.grade ? `${sub.grade}/100` : 'Not graded'}</TableCell>
                   <TableCell align="right">
@@ -126,7 +136,7 @@ const SubmissionsList = () => {
               ))}
               {submissions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                     <Typography color="textSecondary">No submissions yet</Typography>
                   </TableCell>
                 </TableRow>
@@ -145,6 +155,11 @@ const SubmissionsList = () => {
                 <Typography variant="subtitle2" gutterBottom>Student Content:</Typography>
                 <Typography variant="body2">{selectedSubmission.content}</Typography>
               </Box>
+            )}
+            {selectedSubmission?.fileUrl && (
+              <Button variant="outlined" onClick={() => window.open(selectedSubmission.fileUrl, '_blank')}>
+                View uploaded file
+              </Button>
             )}
             <TextField
               label="Grade (out of 100)"

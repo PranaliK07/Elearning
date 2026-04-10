@@ -120,6 +120,8 @@ const StudentDashboard = () => {
   const swipeRafRef = useRef(null);
   const swipeLockRef = useRef(false);
   const swipeCooldownRef = useRef(0);
+  const inlineWatchAccumulatorRef = useRef(0);
+  const inlineLastTimeRef = useRef(0);
   
   // Constants
   const SWIPE_THRESHOLD = 60;
@@ -159,6 +161,16 @@ const StudentDashboard = () => {
     }
   }, [currentIndex, videos, openPlayer, videoProgress]);
 
+  useEffect(() => {
+    inlineWatchAccumulatorRef.current = 0;
+    inlineLastTimeRef.current = 0;
+  }, [currentIndex]);
+
+  useEffect(() => {
+    inlineWatchAccumulatorRef.current = 0;
+    inlineLastTimeRef.current = 0;
+  }, [openPlayer]);
+
   // Handle fullscreen video events - IMPROVED VERSION
   useEffect(() => {
     if (openPlayer && fullVideoRef.current && selectedVideo) {
@@ -169,7 +181,9 @@ const StudentDashboard = () => {
         
         // Update progress every 5 seconds
         if (Math.floor(video.currentTime) % 5 === 0) {
-          updateWatchTime(5);
+          if (selectedVideo?.id) {
+            updateWatchTime(selectedVideo.id, 5);
+          }
           
           // Store video progress
           if (selectedVideo?.id && video.duration) {
@@ -721,13 +735,38 @@ const StudentDashboard = () => {
     }
   };
 
+  const formatWatchTime = (seconds) => {
+    const totalSeconds = Number(seconds) || 0;
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const handleInlineTimeUpdate = (index, videoId, currentTime) => {
+    if (openPlayer) return;
+    if (index !== currentIndex) return;
+    const delta = currentTime - (inlineLastTimeRef.current || 0);
+    inlineLastTimeRef.current = currentTime;
+    if (delta > 0 && delta < 3) {
+      inlineWatchAccumulatorRef.current += delta;
+      if (inlineWatchAccumulatorRef.current >= 5) {
+        const sendSeconds = Math.floor(inlineWatchAccumulatorRef.current);
+        inlineWatchAccumulatorRef.current -= sendSeconds;
+        updateWatchTime(videoId, sendSeconds);
+      }
+    }
+  };
+
   const gradeProgress = getGradeProgress(user?.grade);
   const quizStats = getQuizStats();
   
   const progressItems = [
     { label: 'Grade', value: user?.grade || 'N/A', icon: School, color: '#FF6B6B' },
     { label: 'Progress', value: `${gradeProgress}%`, icon: AutoGraph, color: '#4ECDC4' },
-    { label: 'Watch Time', value: `${Math.round((watchTimeStats?.totalWatchTime || 0) / 60)}h`, icon: Schedule, color: '#FFD93D' },
+    { label: 'Watch Time', value: formatWatchTime(watchTimeStats?.totalWatchTime || 0), icon: Schedule, color: '#FFD93D' },
     { label: 'Points', value: user?.points || 0, icon: Star, color: '#6C5CE7' }
   ];
 
@@ -1110,6 +1149,7 @@ const StudentDashboard = () => {
                 muted={muted}
                 loop
                 playsInline
+                onTimeUpdate={(e) => handleInlineTimeUpdate(index, video.id, e.currentTarget.currentTime)}
                 preload={index === currentIndex ? 'auto' : 'metadata'}
                 onError={() => setVideoErrors(prev => ({ ...prev, [video.id]: true }))}
                 onLoadedData={() => {
@@ -1240,6 +1280,7 @@ const StudentDashboard = () => {
         open={openPlayer}
         onClose={handleClosePlayer}
         video={selectedVideo}
+        onWatchTime={(seconds) => updateWatchTime(selectedVideo?.id, seconds)}
         onNext={handleNextVideo}
         onPrev={handlePrevVideo}
         hasMore={currentIndex < videos.length - 1}

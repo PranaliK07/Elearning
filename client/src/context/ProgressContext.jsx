@@ -80,6 +80,15 @@ export const ProgressProvider = ({ children }) => {
     }
   };
 
+  const updateWatchTime = async (contentId, secondsWatched = 0) => {
+    if (!contentId || !secondsWatched || Number.isNaN(secondsWatched)) {
+      return { success: false };
+    }
+    const seconds = Math.max(0, Math.floor(secondsWatched));
+    if (seconds <= 0) return { success: false };
+    return updateProgress(contentId, { watchTime: seconds });
+  };
+
   const getContentProgress = (contentId) => {
     return progress.find(p => p.ContentId === contentId);
   };
@@ -102,6 +111,19 @@ export const ProgressProvider = ({ children }) => {
     return Math.round((completed / subjectContents.length) * 100);
   };
 
+  const getQuizStats = () => {
+    const quizEntries = progress.filter((p) => p.quizScore !== null && p.quizScore !== undefined);
+    const totalTaken = quizEntries.length;
+    const averageScore = totalTaken
+      ? Math.round(quizEntries.reduce((sum, p) => sum + (p.quizScore || 0), 0) / totalTaken)
+      : 0;
+    return {
+      totalTaken,
+      averageScore,
+      currentStreak: user?.streak || 0
+    };
+  };
+
   const value = {
     progress,
     watchTimeStats,
@@ -110,6 +132,8 @@ export const ProgressProvider = ({ children }) => {
     getContentProgress,
     getGradeProgress,
     getSubjectProgress,
+    updateWatchTime,
+    getQuizStats,
     refreshStats: fetchWatchTimeStats
   };
 

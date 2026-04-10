@@ -17,6 +17,9 @@ const Assignment = require('./Assignment');
 const Submission = require('./Submission');
 const RoleAccess = require('./RoleAccess');
 const ClassCommunication = require('./ClassCommunication');
+const sequelize = require('../config/database');
+const Feedback = require('./Feedback');
+const Attendance = require('./Attendance');
 
 // Grade Associations
 Grade.hasMany(Subject, { onDelete: 'CASCADE' });
@@ -125,7 +128,21 @@ ClassCommunication.belongsTo(User, { as: 'teacher', foreignKey: 'teacherId' });
 ClassCommunication.belongsTo(Grade, { foreignKey: 'gradeId' });
 Grade.hasMany(ClassCommunication, { foreignKey: 'gradeId' });
 
+// Feedback associations (teacher/admin -> student)
+User.hasMany(Feedback, { as: 'receivedFeedback', foreignKey: 'studentId', onDelete: 'CASCADE' });
+User.hasMany(Feedback, { as: 'givenFeedback', foreignKey: 'authorId', onDelete: 'CASCADE' });
+Feedback.belongsTo(User, { as: 'student', foreignKey: 'studentId' });
+Feedback.belongsTo(User, { as: 'author', foreignKey: 'authorId' });
+
+// Attendance associations
+Attendance.belongsTo(User, { as: 'student', foreignKey: 'studentId' });
+Attendance.belongsTo(User, { as: 'markedBy', foreignKey: 'markedById' });
+Attendance.belongsTo(Grade, { foreignKey: 'gradeId' });
+Grade.hasMany(Attendance, { foreignKey: 'gradeId', onDelete: 'CASCADE' });
+User.hasMany(Attendance, { as: 'attendance', foreignKey: 'studentId', onDelete: 'CASCADE' });
+
 module.exports = {
+  sequelize,
   User,
   Grade,
   Subject,
@@ -144,5 +161,7 @@ module.exports = {
   Assignment,
   Submission,
   RoleAccess,
-  ClassCommunication
+  ClassCommunication,
+  Feedback,
+  Attendance
 };

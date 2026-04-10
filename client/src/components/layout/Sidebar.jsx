@@ -24,6 +24,9 @@ import {
   Person as ProfileIcon,
   Star as StarIcon,
   Assignment as AssignmentIcon,
+  EventAvailable as AttendanceIcon,
+  Class as ClassManagementIcon,
+  HelpOutline as DoubtIcon,
   BarChart as ReportsIcon,
   Campaign as CampaignIcon,
   Settings as SettingsIcon,
@@ -31,11 +34,14 @@ import {
   Logout as LogoutIcon,
   Add as AddIcon,
   AccountTree as TopicManagerIcon,
+  RateReview as FeedbackIcon,
+  Description,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/axios';
 import { useState, useEffect } from 'react';
 import { resolveAvatarSrc } from '../../utils/media';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 const drawerWidth = 240;
 const appBarHeights = { xs: 56, sm: 64 };
@@ -43,30 +49,31 @@ const appBarHeights = { xs: 56, sm: 64 };
 const configuredModules = new Set([
   'dashboard',
   'subjects',
-<<<<<<< HEAD
   'play',
   'progress',
   'achievements',
   'profile',
   'new-lesson',
   'subject-topic',
-=======
-  'homework',
->>>>>>> 5c863f60ec7451a05e25a15d2175040663ab0e24
   'assignments',
   'communications',
+  'class-management',
   'content',
   'users',
   'reports',
   'reports-issues',
   'settings',
-  'business-settings'
+  'business-settings',
+  'doubts',
+  'play',
+  'feedback',
+  'attendance'
 ]);
 
 const defaultRoleAccess = {
-  admin: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'users', 'content', 'reports', 'reports-issues', 'settings', 'new-lesson', 'subject-topic', 'assignments', 'communications', 'business-settings']),
-  teacher: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'new-lesson', 'subject-topic', 'assignments', 'reports', 'communications']),
-  student: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'assignments'])
+  admin: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'users', 'content', 'reports', 'reports-issues', 'settings', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'communications', 'business-settings', 'doubts', 'feedback']),
+  teacher: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'reports', 'communications', 'feedback']),
+  student: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'doubts', 'feedback', 'attendance'])
 };
 
 const loadRoleAccess = () => {
@@ -88,6 +95,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [accessVersion, setAccessVersion] = useState(0);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setAccessVersion(v => v + 1);
@@ -115,38 +123,39 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
 
   const role = user?.role || 'student';
   const roleAccess = loadRoleAccess(accessVersion);
-  const allowed = roleAccess[role] || defaultRoleAccess[role] || defaultRoleAccess.student;
+  const baseAllowed = roleAccess[role] || defaultRoleAccess[role] || defaultRoleAccess.student;
+  const studentBaseline = new Set(['dashboard', 'subjects', 'progress', 'achievements', 'profile', 'doubts', 'assignments', 'attendance']);
+  const allowed = role === 'student'
+    ? new Set([...baseAllowed, ...studentBaseline])
+    : baseAllowed;
 
   const currentPath = `${location.pathname}${location.search || ''}`;
   const currentTab = new URLSearchParams(location.search).get('tab');
 
+  const assignmentPath = role === 'student' ? '/homework' : '/assignments/create';
+  const attendancePath = role === 'student' ? '/attendance' : '/attendance/manage';
   const items = [
     { key: 'dashboard', text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { key: 'users', text: 'User Management', icon: <ProfileIcon />, path: '/admin/users' },
-    { key: 'content', text: 'Content Overview', icon: <ContentOverviewIcon />, path: '/admin/content' },
+    { key: 'content', text: 'Content Management', icon: <ContentOverviewIcon />, path: '/admin/content' },
     { key: 'subjects', text: 'Study', icon: <StudyIcon />, path: '/study' },
     { key: 'new-lesson', text: 'New Lesson', icon: <AddIcon />, path: '/content/create' },
+    { key: 'study-material', text: 'Study Material', icon: <Description />, path: '/study-material' },
     { key: 'subject-topic', text: 'Subject & Topic', icon: <TopicManagerIcon />, path: '/topics/manage' },
     { key: 'play', text: 'Play', icon: <PlayIcon />, path: '/play' },
     { key: 'progress', text: 'Progress', icon: <ProgressIcon />, path: '/progress' },
     { key: 'achievements', text: 'Achievements', icon: <AchievementsIcon />, path: '/achievements' },
-    { key: 'profile', text: 'Profile', icon: <ProfileIcon />, path: '/profile' },
-    { key: 'assignments', text: 'Assignments', icon: <AssignmentIcon />, path: '/assignments/create' },
+    { key: 'assignments', text: 'Assignments', icon: <AssignmentIcon />, path: assignmentPath },
+    { key: 'attendance', text: 'Attendance', icon: <AttendanceIcon />, path: attendancePath },
+    { key: 'class-management', text: 'Class Management', icon: <ClassManagementIcon />, path: '/classes/manage' },
+    { key: 'doubts', text: 'Doubts', icon: <DoubtIcon />, path: '/doubts' },
     { key: 'reports', text: 'Reports', icon: <ReportsIcon />, path: '/reports' },
     { key: 'reports-issues', text: 'Reports & Issues', icon: <ReportsIcon />, path: '/admin/reports' },
     { key: 'communications', text: 'Class Communication', icon: <CampaignIcon />, path: '/class-communication' },
-<<<<<<< HEAD
     { key: 'settings', text: 'System Settings', icon: <SettingsIcon />, path: '/admin/system-settings' },
     { key: 'business-settings', text: 'Business Settings', icon: <BusinessSettingsIcon />, path: '/admin/business-settings' },
-=======
-    { key: 'content', text: 'Content', icon: <StudyIcon />, path: '/content/create' },
-    { key: 'play', text: 'Quize', icon: <PlayIcon />, path: '/play' },
-    { key: 'progress', text: 'Progress', icon: <ProgressIcon />, path: '/progress' },
-    { key: 'achievements', text: 'Achievements', icon: <AchievementsIcon />, path: '/achievements' },
+    { key: 'feedback', text: 'Feedback & Ratings', icon: <FeedbackIcon />, path: '/feedback' },
     { key: 'profile', text: 'Profile', icon: <ProfileIcon />, path: '/profile' },
-    { key: 'settings', text: 'Settings', icon: <SettingsIcon />, path: '/profile/edit' },
-    { key: 'business-settings', text: 'Business Settings', icon: <BusinessSettingsIcon />, path: '/dashboard?tab=business' },
->>>>>>> 5c863f60ec7451a05e25a15d2175040663ab0e24
   ];
 
   const isSelected = (item) => {
@@ -160,27 +169,28 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
   };
 
   const displayItems = items.filter(({ key }) => {
-    if (role === 'student' && key === 'assignments') {
-      return false;
-    }
-    if (role === 'student' && key === 'homework') {
-      return true;
-    }
+    if (role === 'student' && key === 'doubts') return true;
     if (configuredModules.has(key)) {
       return allowed.has(key);
     }
     return true;
   }).filter(({ key }) => {
     // Basic role guards: students don't see teacher/admin only links when not allowed
-    if (key === 'assignments' || key === 'reports' || key === 'reports-issues' || key === 'new-lesson' || key === 'subject-topic' || key === 'business-settings' || key === 'communications') {
-      return role === 'teacher' || role === 'admin' || allowed.has(key);
+    if (key === 'assignments' || key === 'reports' || key === 'reports-issues' || key === 'new-lesson' || key === 'subject-topic' || key === 'business-settings' || key === 'communications' || key === 'class-management' || key === 'study-material') {
+      return role === 'teacher' || role === 'admin' || role === 'student' || allowed.has(key);
+    }
+    if (key === 'feedback') {
+      return allowed.has(key);
     }
     return true;
   });
 
   const handleLogoutClick = () => {
-    const shouldLogout = window.confirm('Are you sure you want to logout?');
-    if (!shouldLogout) return;
+    setLogoutDialogOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutDialogOpen(false);
     logout();
     navigate('/login');
     if (mobileOpen) handleDrawerToggle();
@@ -188,6 +198,15 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
 
   const drawer = (
     <div>
+      <ConfirmDialog
+        open={logoutDialogOpen}
+        title="Logout"
+        description="Are you sure you want to logout?"
+        confirmText="Logout"
+        cancelText="Cancel"
+        onClose={() => setLogoutDialogOpen(false)}
+        onConfirm={confirmLogout}
+      />
       <Toolbar>
         <Box
           sx={{ textAlign: 'center', width: '100%', cursor: 'pointer' }}
@@ -201,7 +220,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
               width: 80,
               height: 80,
               margin: '10px auto',
-              border: '3px solid #3f51b5'
+              border: '3px solid #B0125B'
             }}
             src={resolveAvatarSrc(user?.avatar)}
           >

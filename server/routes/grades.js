@@ -22,8 +22,8 @@ router.get('/:id/subjects', getGradeSubjects);
 router.get('/:id/stats', getGradeStats);
 
 // Admin only routes
-router.post('/', authorize('admin'), validate.grade, validate.handleValidationErrors, createGrade);
-router.put('/:id', authorize('admin'), validate.grade, validate.handleValidationErrors, updateGrade);
-router.delete('/:id', authorize('admin'), deleteGrade);
+router.post('/', authorize('admin', 'teacher'), validate.grade, validate.handleValidationErrors, createGrade);
+router.put('/:id', authorize('admin', 'teacher'), validate.grade, validate.handleValidationErrors, updateGrade);
+router.delete('/:id', authorize('admin', 'teacher'), deleteGrade);
 
 module.exports = router;

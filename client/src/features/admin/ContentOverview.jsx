@@ -17,7 +17,12 @@ import {
   Divider,
   Grid,
   Card,
-  CardContent
+  CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import { Add, Edit, Delete, Source as ContentOverviewIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -28,6 +33,8 @@ const ContentOverview = () => {
   const navigate = useNavigate();
   const [content, setContent] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contentToDelete, setContentToDelete] = useState(null);
 
   const fetchContent = async () => {
     setLoading(true);
@@ -38,6 +45,8 @@ const ContentOverview = () => {
 
       if (Array.isArray(contentRes.data)) {
         contentData = contentRes.data;
+      } else if (contentRes.data?.contents) {
+        contentData = contentRes.data.contents;
       } else if (contentRes.data?.content) {
         contentData = contentRes.data.content;
       } else if (contentRes.data?.data) {
@@ -71,14 +80,23 @@ const ContentOverview = () => {
     fetchContent();
   }, []);
 
-  const handleDeleteContent = async (contentId) => {
+  const handleDeleteContent = async () => {
+    if (!contentToDelete) return;
     try {
-      await api.delete(`/api/content/${contentId}`);
-      setContent((prev) => prev.filter((c) => c.id !== contentId && c._id !== contentId));
+      await api.delete(`/api/content/${contentToDelete}`);
+      setContent((prev) => prev.filter((c) => c.id !== contentToDelete && c._id !== contentToDelete));
       toast.success('Content deleted successfully');
     } catch (err) {
       toast.error('Failed to delete content');
+    } finally {
+      setDeleteDialogOpen(false);
+      setContentToDelete(null);
     }
+  };
+
+  const openDeleteDialog = (id) => {
+    setContentToDelete(id);
+    setDeleteDialogOpen(true);
   };
 
   return (
@@ -160,23 +178,23 @@ const ContentOverview = () => {
                                 ? 'warning'
                                 : item.type === 'assignment'
                                   ? 'success'
-                                  : 'secondary'
+                                  : item.type === 'reading'
+                                    ? 'info'
+                                    : 'secondary'
                           }
                         />
                       </TableCell>
-                      <TableCell>{item.grade || item.gradeLevel || 'N/A'}</TableCell>
-                      <TableCell>{item.subject || 'N/A'}</TableCell>
+                      <TableCell>{item.Grade ? `Class ${item.Grade.level}` : (item.grade || item.gradeLevel || 'N/A')}</TableCell>
+                      <TableCell>{item.Subject?.name || item.subject || 'N/A'}</TableCell>
                       <TableCell>{item.views || item.attempts || item.downloads || 0}</TableCell>
                       <TableCell>
                         <Chip
-                          label={item.status || 'draft'}
+                          label={item.isPublished ? 'published' : (item.status || 'draft')}
                           size="small"
                           color={
-                            item.status === 'published'
+                            (item.isPublished || item.status === 'published')
                               ? 'success'
-                              : item.status === 'draft'
-                                ? 'default'
-                                : 'warning'
+                              : 'default'
                           }
                         />
                       </TableCell>
@@ -190,11 +208,7 @@ const ContentOverview = () => {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => {
-                            if (window.confirm('Delete this content? This cannot be undone.')) {
-                              handleDeleteContent(item.id || item._id);
-                            }
-                          }}
+                          onClick={() => openDeleteDialog(item.id || item._id)}
                         >
                           <Delete />
                         </IconButton>
@@ -214,7 +228,7 @@ const ContentOverview = () => {
               Content Summary
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={2.4}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.type === 'video' || c.contentType === 'video').length}</Typography>
@@ -222,7 +236,7 @@ const ContentOverview = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={2.4}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.type === 'quiz' || c.contentType === 'quiz').length}</Typography>
@@ -230,7 +244,7 @@ const ContentOverview = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={2.4}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.type === 'assignment' || c.contentType === 'assignment').length}</Typography>
@@ -238,7 +252,15 @@ const ContentOverview = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={2.4}>
+                <Card variant="outlined">
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Typography variant="h6">{content.filter((c) => c.type === 'reading' || c.contentType === 'reading').length}</Typography>
+                    <Typography variant="caption">Study Materials</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={2.4}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.status === 'published').length}</Typography>
@@ -250,6 +272,36 @@ const ContentOverview = () => {
           </Box>
         )}
       </Paper>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          {"Confirm Deletion"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete this content? This action cannot be undone and will remove all associated data.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteContent} 
+            variant="contained" 
+            color="error" 
+            autoFocus
+            startIcon={<Delete />}
+          >
+            Delete Permanently
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

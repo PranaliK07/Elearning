@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const rateLimiters = require('./middleware/rateLimiters');
 require('dotenv').config();
 
 const sequelize = require('./config/database');
@@ -27,6 +27,9 @@ const searchRoutes = require('./routes/search');
 const notificationRoutes = require('./routes/notifications');
 const assignmentRoutes = require('./routes/assignments');
 const reportsRoutes = require('./routes/reports');
+const contactRoutes = require('./routes/contact');
+const feedbackRoutes = require('./routes/feedback');
+const attendanceRoutes = require('./routes/attendance');
 
 const app = express();
 
@@ -37,18 +40,22 @@ app.use(helmet({
 
 // CORS Configuration
 app.use(cors({
-  origin: [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173'],
+  origin: [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
   optionsSuccessStatus: 200
 }));
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use('/api/', limiter);
+// Rate Limiting (enable in production)
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api/auth', rateLimiters.auth);
+  app.use('/api/upload', rateLimiters.upload);
+  app.use('/api/', (req, res, next) => {
+    if (req.path.startsWith('/auth') || req.path.startsWith('/upload')) {
+      return next();
+    }
+    return rateLimiters.api(req, res, next);
+  });
+}
 
 // Body Parser
 app.use(express.json({ limit: '50mb' }));
@@ -81,6 +88,13 @@ app.use('/api/search', searchRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/attendance', attendanceRoutes);
+
+
+// Use routes
+
 
 // Health Check
 app.get('/api/health', (req, res) => {

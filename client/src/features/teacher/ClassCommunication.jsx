@@ -31,7 +31,8 @@ const ClassCommunication = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const isTeacher = user?.role === 'teacher';
-  const canViewHistory = isAdmin;
+  const isStudent = user?.role === 'student';
+  const canViewHistory = isAdmin || isTeacher || isStudent;
   const basePath = isAdmin ? '/api/admin' : '/api/teacher';
 
   const [classes, setClasses] = useState([]);
@@ -63,6 +64,7 @@ const ClassCommunication = () => {
   }), []);
 
   const fetchReferenceData = async () => {
+    if (isStudent) return;
     try {
       const [classesRes, teachersRes] = await Promise.all([
         axios.get(isAdmin ? '/api/grades' : `${basePath}/classes`),
@@ -78,20 +80,23 @@ const ClassCommunication = () => {
   useEffect(() => {
     fetchReferenceData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin]);
+  }, [isAdmin, isStudent]);
 
   const fetchCommunications = async () => {
     if (!canViewHistory) return;
     try {
       setLoading(true);
-      const response = await axios.get(`${basePath}/communications`, {
-        params: {
-          gradeId: filters.gradeId || undefined,
-          teacherId: isAdmin ? (filters.teacherId || undefined) : undefined,
-          audience: filters.audience || undefined,
-          limit: 100
-        }
-      });
+      let url = `${basePath}/communications`;
+      const params = {
+        gradeId: filters.gradeId || undefined,
+        teacherId: isAdmin ? (filters.teacherId || undefined) : undefined,
+        audience: filters.audience || undefined,
+        limit: 100
+      };
+      if (isStudent) {
+        url = '/api/teacher/communications/feed';
+      }
+      const response = await axios.get(url, { params });
       setCommunications(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       toast.error('Failed to load communication history');
@@ -104,7 +109,7 @@ const ClassCommunication = () => {
   useEffect(() => {
     fetchCommunications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [basePath, canViewHistory, isAdmin, filters.gradeId, filters.teacherId, filters.audience]);
+  }, [basePath, canViewHistory, isAdmin, isStudent, filters.gradeId, filters.teacherId, filters.audience]);
 
   const filteredCommunications = useMemo(() => {
     const query = filters.search.trim().toLowerCase();
@@ -179,13 +184,14 @@ const ClassCommunication = () => {
       </Box>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={5}>
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Campaign color="primary" />
-                <Typography variant="h6">New Message</Typography>
-              </Box>
+        {!isStudent && (
+          <Grid item xs={12} md={5}>
+            <Card sx={{ borderRadius: 3 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Campaign color="primary" />
+                  <Typography variant="h6">New Message</Typography>
+                </Box>
 
               <Grid container spacing={2}>
                 <Grid item xs={12}>
@@ -207,23 +213,23 @@ const ClassCommunication = () => {
                 </Grid>
 
                 {isAdmin && (
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel>Send As</InputLabel>
-                      <Select
-                        label="Send As"
-                        value={form.senderId}
-                        onChange={(e) => setForm((prev) => ({ ...prev, senderId: e.target.value }))}
-                      >
-                        <MenuItem value="">Admin</MenuItem>
-                        {teachers.map((teacher) => (
-                          <MenuItem key={teacher.id} value={teacher.id}>
-                            {teacher.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
+              <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Send As</InputLabel>
+                    <Select
+                      label="Send As"
+                      value={form.senderId}
+                      onChange={(e) => setForm((prev) => ({ ...prev, senderId: e.target.value }))}
+                    >
+                      <MenuItem value="">Admin</MenuItem>
+                      {teachers.map((teacher) => (
+                        <MenuItem key={teacher.id} value={teacher.id}>
+                          {teacher.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
                 )}
 
                 <Grid item xs={12}>
@@ -268,23 +274,24 @@ const ClassCommunication = () => {
                     helperText={errors.message}
                   />
                 </Grid>
-                <Grid item xs={12}>
-                  <Button
-                    variant="contained"
-                    startIcon={<Send />}
-                    onClick={handleSend}
-                    disabled={sending}
-                    fullWidth
-                  >
-                    {sending ? 'Sending...' : 'Send Message'}
-                  </Button>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="contained"
+                      startIcon={<Send />}
+                      onClick={handleSend}
+                      disabled={sending}
+                      fullWidth
+                    >
+                      {sending ? 'Sending...' : 'Send Message'}
+                    </Button>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
-        <Grid item xs={12} md={7}>
+        <Grid item xs={12} md={isStudent ? 12 : 7}>
           <Paper sx={{ p: 2, borderRadius: 3 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Communication History

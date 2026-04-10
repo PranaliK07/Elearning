@@ -12,7 +12,7 @@ const Grade = sequelize.define('Grade', {
     allowNull: false,
     validate: {
       min: 1,
-      max: 5
+      max: 12
     }
   },
   name: {

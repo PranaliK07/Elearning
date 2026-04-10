@@ -51,6 +51,7 @@ const UserManagement = () => {
     role: 'student',
     grade: '',
     studentEmail: '',
+    parentPhone: '',
     status: 'active'
   });
 
@@ -111,6 +112,15 @@ const UserManagement = () => {
       if (gradeError) nextErrors.grade = gradeError;
     }
 
+    if (newUser.role === 'parent') {
+      const phone = String(newUser.parentPhone || '').trim();
+      if (!phone) {
+        nextErrors.parentPhone = 'Parent mobile number is required';
+      } else if (!/^[+\d][\d\s()-]{6,19}$/.test(phone)) {
+        nextErrors.parentPhone = 'Enter a valid parent mobile number';
+      }
+    }
+
     if (newUser.role === 'parent' && newUser.studentEmail.trim()) {
       const studentEmailError = validateEmail(newUser.studentEmail, 'Student email');
       if (studentEmailError) nextErrors.studentEmail = studentEmailError;
@@ -168,7 +178,7 @@ const UserManagement = () => {
               sx={{ width: { xs: '100%', sm: 'auto' } }}
               onClick={() => {
                 setEditingUserId(null);
-                setNewUser({ name: '', email: '', role: 'student', grade: '', studentEmail: '', status: 'active' });
+                setNewUser({ name: '', email: '', role: 'student', grade: '', studentEmail: '', parentPhone: '', status: 'active' });
                 setOpenUserDialog(true);
               }}
             >
@@ -257,6 +267,7 @@ const UserManagement = () => {
                               role: user.role || 'student',
                               grade: user.grade || '',
                               studentEmail: '',
+                              parentPhone: user.parentPhone || '',
                               status: (user.status === 'inactive' || user.isActive === false) ? 'inactive' : 'active'
                             });
                             setOpenUserDialog(true);
@@ -361,6 +372,22 @@ const UserManagement = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  label="Parent Mobile Number"
+                  value={newUser.parentPhone}
+                  onChange={(e) => {
+                    setNewUser((prev) => ({ ...prev, parentPhone: e.target.value }));
+                    setFormErrors((prev) => ({ ...prev, parentPhone: '' }));
+                  }}
+                  error={!!formErrors.parentPhone}
+                  helperText={formErrors.parentPhone}
+                  placeholder="+91 9876543210"
+                />
+              </Grid>
+            )}
+            {newUser.role === 'parent' && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
                   label="Student Email to Link"
                   value={newUser.studentEmail}
                   onChange={(e) => {
@@ -418,7 +445,8 @@ const UserManagement = () => {
                   role: newUser.role,
                   grade: newUser.role === 'student' && newUser.grade ? Number(newUser.grade) : null,
                   isActive: newUser.status === 'active',
-                  studentEmail: newUser.role === 'parent' && newUser.studentEmail ? newUser.studentEmail.trim() : undefined
+                  studentEmail: newUser.role === 'parent' && newUser.studentEmail ? newUser.studentEmail.trim() : undefined,
+                  parentPhone: newUser.role === 'parent' ? String(newUser.parentPhone || '').trim() : undefined
                 };
 
                 let response;
@@ -446,7 +474,7 @@ const UserManagement = () => {
                   }
                 }
 
-                setNewUser({ name: '', email: '', role: 'student', grade: '', studentEmail: '', status: 'active' });
+                setNewUser({ name: '', email: '', role: 'student', grade: '', studentEmail: '', parentPhone: '', status: 'active' });
                 setOpenUserDialog(false);
                 setEditingUserId(null);
 

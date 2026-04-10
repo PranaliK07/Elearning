@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import VideosHome from './VideosHome';
 import TeacherDashboard from './TeacherDashboard';
 import AdminDashboard from './AdminDashboard';
-import { CircularProgress, Box } from '@mui/material';
+import { Box, CircularProgress, Stack } from '@mui/material';
 
 const DashboardRouter = () => {
     const { user, loading } = useAuth();
@@ -16,15 +16,23 @@ const DashboardRouter = () => {
         );
     }
 
-    switch (user?.role) {
-      case 'admin':
-        return <AdminDashboard />;
-      case 'teacher':
-        return <TeacherDashboard />;
+    const renderDashboard = () => {
+        switch (user?.role) {
+            case 'admin':
+                return <AdminDashboard />;
+            case 'teacher':
+                return <TeacherDashboard />;
       case 'student':
       default:
             return <VideosHome />;
-    }
+        }
+    };
+
+    return (
+        <Stack spacing={2}>
+            {renderDashboard()}
+        </Stack>
+    );
 };
 
 export default DashboardRouter;

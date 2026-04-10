@@ -1,13 +1,14 @@
 const { User, Progress, Achievement, Grade } = require('../models');
 const { Op } = require('sequelize');
 const crypto = require('crypto');
+const { hardDeleteUserById } = require('../utils/hardDeleteUser');
 
 const getUsers = async (req, res) => {
   try {
     const { page = 1, limit = 10, role, search } = req.query;
     const offset = (page - 1) * limit;
 
-    const where = {};
+    const where = { isDeleted: false };
     if (role) where.role = role;
     if (search) {
       where[Op.or] = [
@@ -65,7 +66,7 @@ const getUser = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, role = 'student', grade, isActive, studentEmail, studentId } = req.body;
+    const { name, email, role = 'student', grade, isActive, studentEmail, studentId, parentPhone } = req.body;
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ message: 'Name is required' });
@@ -81,6 +82,54 @@ const createUser = async (req, res) => {
     }
 
     let existing = await User.findOne({ where: { email: String(email).trim().toLowerCase() } });
+
+    // Restore flow: allow re-creating a previously deleted user with the same email
+    if (existing && existing.isDeleted) {
+      if (normalizedRole === 'parent') {
+        const phone = typeof parentPhone === 'string' ? parentPhone.trim() : '';
+        if (!phone) {
+          return res.status(400).json({ message: 'Parent mobile number is required' });
+        }
+        if (phone.length < 7 || phone.length > 20) {
+          return res.status(400).json({ message: 'Parent mobile number must be between 7 and 20 characters' });
+        }
+      }
+
+      const temporaryPassword = crypto.randomBytes(6).toString('hex');
+      existing.name = String(name).trim();
+      existing.role = normalizedRole;
+      existing.grade = grade || null;
+      existing.isActive = isActive === undefined ? true : Boolean(isActive);
+      existing.isDeleted = false;
+      existing.password = temporaryPassword;
+      existing.parentPhone = normalizedRole === 'parent'
+        ? String(parentPhone).trim()
+        : (existing.parentPhone || null);
+      await existing.save();
+
+      if (normalizedRole === 'parent' && (studentEmail || studentId)) {
+        let student = null;
+        if (studentId) {
+          student = await User.findByPk(studentId);
+        } else if (studentEmail) {
+          student = await User.findOne({ where: { email: String(studentEmail).trim().toLowerCase(), role: 'student' } });
+        }
+
+        if (!student || student.role !== 'student') {
+          return res.status(404).json({ message: 'Student not found to link parent' });
+        }
+
+        student.ParentId = existing.id;
+        await student.save();
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: 'User restored successfully',
+        temporaryPassword,
+        user: existing.getPublicProfile()
+      });
+    }
 
     if (normalizedRole === 'parent' && existing && (studentEmail || studentId)) {
       let student = null;
@@ -109,6 +158,16 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    if (normalizedRole === 'parent') {
+      const phone = typeof parentPhone === 'string' ? parentPhone.trim() : '';
+      if (!phone) {
+        return res.status(400).json({ message: 'Parent mobile number is required' });
+      }
+      if (phone.length < 7 || phone.length > 20) {
+        return res.status(400).json({ message: 'Parent mobile number must be between 7 and 20 characters' });
+      }
+    }
+
     const temporaryPassword = crypto.randomBytes(6).toString('hex');
     const user = await User.create({
       name: String(name).trim(),
@@ -116,6 +175,7 @@ const createUser = async (req, res) => {
       password: temporaryPassword,
       role: normalizedRole,
       grade: grade || null,
+      parentPhone: normalizedRole === 'parent' ? String(parentPhone).trim() : null,
       isActive: isActive === undefined ? true : Boolean(isActive)
     });
 
@@ -239,20 +299,18 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   try {
-    const user = await User.findByPk(req.params.id);
-
-    if (!user) {
+    const result = await hardDeleteUserById(req.params.id);
+    if (!result.deleted) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Soft delete or hard delete? Let's soft delete by deactivating
-    user.isActive = false;
-    await user.save();
-
-    res.json({ success: true, message: 'User deactivated successfully' });
+    return res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ message: 'Server error' });
+    if (error?.statusCode === 400) {
+      return res.status(400).json({ message: error.message });
+    }
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -325,7 +383,7 @@ const toggleUserStatus = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
 
-    if (!user) {
+    if (!user || user.isDeleted) {
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -345,7 +403,7 @@ const toggleUserStatus = async (req, res) => {
 const getTeachers = async (req, res) => {
   try {
     const teachers = await User.findAll({
-      where: { role: 'teacher', isActive: true },
+      where: { role: 'teacher', isActive: true, isDeleted: false },
       attributes: ['id', 'name', 'email', 'avatar']
     });
 
@@ -359,7 +417,7 @@ const getTeachers = async (req, res) => {
 const getStudents = async (req, res) => {
   try {
     const { grade } = req.query;
-    const where = { role: 'student', isActive: true };
+    const where = { role: 'student', isActive: true, isDeleted: false };
     
     if (grade) where.grade = grade;
 

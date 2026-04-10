@@ -1,5 +1,6 @@
 const { User, Progress, Content, Assignment, Submission, Grade, Announcement, Notification, ClassCommunication } = require('../models');
 const { Op } = require('sequelize');
+const { sendSmsAndWhatsappToRecipients, normalizePhone } = require('../utils/parentMessaging');
 
 const getMyClasses = async (req, res) => {
   try {
@@ -234,6 +235,114 @@ const getClassCommunications = async (req, res) => {
   }
 };
 
+const getStudentCommunications = async (req, res) => {
+  try {
+    let userGradeId = req.user.GradeId || null;
+    if (!userGradeId && req.user.grade) {
+      const grade = await Grade.findOne({ where: { level: req.user.grade }, attributes: ['id'] });
+      userGradeId = grade?.id || null;
+    }
+
+    const communications = await ClassCommunication.findAll({
+      where: {
+        audience: { [Op.in]: ['students', 'both'] },
+        ...(userGradeId ? { [Op.or]: [{ gradeId: userGradeId }, { gradeId: null }] } : {})
+      },
+      include: [
+        { model: Grade, attributes: ['id', 'name', 'level'], required: false },
+        { model: User, as: 'teacher', attributes: ['id', 'name', 'email'], required: false }
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: 50
+    });
+
+    res.json(communications);
+  } catch (error) {
+    console.error('Get student communications error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const getCommunicationById = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: 'Valid communication id is required' });
+    }
+
+    const communication = await ClassCommunication.findByPk(id, {
+      include: [
+        { model: Grade, attributes: ['id', 'name', 'level'], required: false },
+        { model: User, as: 'teacher', attributes: ['id', 'name', 'email', 'avatar', 'role'], required: false }
+      ]
+    });
+
+    if (!communication) {
+      return res.status(404).json({ message: 'Communication not found' });
+    }
+
+    const role = req.user?.role;
+    if (!role) return res.status(401).json({ message: 'Not authorized' });
+
+    // Staff can view any communication
+    if (role === 'teacher' || role === 'admin') {
+      return res.json(communication);
+    }
+
+    // Audience checks
+    if (role === 'student') {
+      if (!['students', 'both'].includes(communication.audience)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (communication.gradeId) {
+        let userGradeId = req.user.GradeId || null;
+        if (!userGradeId && req.user.grade) {
+          const grade = await Grade.findOne({ where: { level: req.user.grade }, attributes: ['id'] });
+          userGradeId = grade?.id || null;
+        }
+        if (!userGradeId || Number(userGradeId) !== Number(communication.gradeId)) {
+          return res.status(403).json({ message: 'Access denied' });
+        }
+      }
+
+      return res.json(communication);
+    }
+
+    if (role === 'parent') {
+      if (!['parents', 'both'].includes(communication.audience)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (communication.gradeId) {
+        const hasChildInClass = await User.findOne({
+          where: {
+            role: 'student',
+            isActive: true,
+            ParentId: req.user.id,
+            [Op.or]: [
+              { GradeId: communication.gradeId },
+              // backward compat: students may have grade level stored in `grade`
+              { grade: communication.Grade?.level || -1 }
+            ]
+          },
+          attributes: ['id']
+        });
+        if (!hasChildInClass) {
+          return res.status(403).json({ message: 'Access denied' });
+        }
+      }
+
+      return res.json(communication);
+    }
+
+    return res.status(403).json({ message: 'Access denied' });
+  } catch (error) {
+    console.error('Get communication by id error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const sendClassCommunication = async (req, res) => {
   try {
     const { title, message, audience = 'both', gradeId } = req.body;
@@ -256,7 +365,7 @@ const sendClassCommunication = async (req, res) => {
       }
     }
 
-    const studentWhere = { role: 'student', isActive: true };
+    const studentWhere = { role: 'student', isActive: true, isDeleted: false };
     if (grade) {
       studentWhere[Op.or] = [
         { GradeId: grade.id },
@@ -266,7 +375,7 @@ const sendClassCommunication = async (req, res) => {
 
     const students = await User.findAll({
       where: studentWhere,
-      attributes: ['id', 'name', 'email', 'ParentId']
+      attributes: ['id', 'name', 'email', 'ParentId', 'parentPhone']
     });
 
     const recipientIds = new Set();
@@ -274,6 +383,7 @@ const sendClassCommunication = async (req, res) => {
       students.forEach((student) => recipientIds.add(student.id));
     }
 
+    let parentRecipients = [];
     if (audience === 'parents' || audience === 'both') {
       const parentIds = [...new Set(students.map((student) => student.ParentId).filter(Boolean))];
       if (parentIds.length) {
@@ -283,9 +393,10 @@ const sendClassCommunication = async (req, res) => {
             role: 'parent',
             isActive: true
           },
-          attributes: ['id']
+          attributes: ['id', 'name', 'parentPhone']
         });
         parents.forEach((parent) => recipientIds.add(parent.id));
+        parentRecipients = parents;
       }
     }
 
@@ -315,6 +426,52 @@ const sendClassCommunication = async (req, res) => {
       await Notification.bulkCreate(notifications);
     }
 
+    // Optional: deliver parent communications via SMS + WhatsApp (Twilio) when audience includes parents.
+    if (audience === 'parents' || audience === 'both') {
+      const className = grade ? grade.name : 'All Classes';
+      const senderName = req.user?.name || 'Teacher';
+
+      const recipientByPhone = new Map();
+      const defaultCountryCode = process.env.PHONE_DEFAULT_COUNTRY_CODE;
+      const addRecipient = (id, phone) => {
+        const normalized = normalizePhone(phone, defaultCountryCode);
+        if (!normalized) return;
+        if (!recipientByPhone.has(normalized)) {
+          recipientByPhone.set(normalized, { id, parentPhone: phone });
+        }
+      };
+
+      parentRecipients.forEach((p) => addRecipient(p.id, p.parentPhone));
+      students.forEach((s) => addRecipient(`student-${s.id}`, s.parentPhone));
+      const recipientsToMessage = Array.from(recipientByPhone.values());
+
+      if (!recipientsToMessage.length) {
+        // No valid phone numbers found; notifications already created above.
+        return res.status(201).json({
+          success: true,
+          message: 'Class communication sent successfully',
+          communication,
+          recipients: notifications.length
+        });
+      }
+
+      setImmediate(() => {
+        sendSmsAndWhatsappToRecipients({
+          recipients: recipientsToMessage,
+          title: communication.title,
+          message: communication.message,
+          senderName,
+          className
+        }).then((result) => {
+          if (result?.skipped) {
+            console.warn('Parent SMS/WhatsApp skipped:', result?.reason);
+          }
+        }).catch((err) => {
+          console.error('Parent SMS/WhatsApp send error:', err);
+        });
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: 'Class communication sent successfully',
@@ -339,5 +496,7 @@ module.exports = {
   createAnnouncement,
   getPendingReviews,
   getClassCommunications,
+  getStudentCommunications,
+  getCommunicationById,
   sendClassCommunication
 };

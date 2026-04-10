@@ -2,37 +2,39 @@ const { User, Content, Quiz, Achievement, Announcement, RoleAccess, sequelize, G
 const { Op } = require('sequelize');
 const fs = require('fs');
 const { exec } = require('child_process');
+const { sendSmsAndWhatsappToRecipients, normalizePhone } = require('../utils/parentMessaging');
 
 const allowedModules = [
   'dashboard',
   'subjects',
-<<<<<<< HEAD
   'play',
   'progress',
   'achievements',
   'profile',
   'new-lesson',
   'subject-topic',
-=======
-  'homework',
->>>>>>> 5c863f60ec7451a05e25a15d2175040663ab0e24
   'assignments',
+  'attendance',
+  'class-management',
   'communications',
   'content',
   'users',
   'reports',
   'reports-issues',
   'settings',
-  'business-settings'
+  'business-settings',
+  'doubts',
+  'feedback',
+  'study-material'
 ];
 
 const defaultRoleAccess = {
-  admin: ['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'users', 'content', 'reports', 'reports-issues', 'settings', 'new-lesson', 'subject-topic', 'assignments', 'communications', 'business-settings'],
-  teacher: ['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'new-lesson', 'subject-topic', 'assignments', 'reports', 'communications'],
-  student: ['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'assignments']
+  admin: ['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'users', 'content', 'reports', 'reports-issues', 'settings', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'communications', 'business-settings', 'doubts', 'feedback', 'study-material'],
+  teacher: ['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'reports', 'communications', 'feedback', 'study-material'],
+  student: ['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'attendance', 'doubts', 'feedback', 'study-material']
 };
 
-const ROLE_ACCESS_VERSION = 5;
+const ROLE_ACCESS_VERSION = 13;
 
 // --- Business settings: role-based sidebar access ---
 const getRoleAccess = async (req, res) => {
@@ -45,7 +47,8 @@ const getRoleAccess = async (req, res) => {
       const created = await Promise.all(
         roles.map(role => RoleAccess.create({
           role,
-          modules: defaultRoleAccess[role]
+          modules: defaultRoleAccess[role],
+          version: ROLE_ACCESS_VERSION
         }))
       );
       return res.json(Object.fromEntries(created.map(r => [r.role, r.modules])));
@@ -65,6 +68,8 @@ const getRoleAccess = async (req, res) => {
         next.add('progress');
         next.add('achievements');
         next.add('profile');
+        next.add('attendance');
+        if (rec.role === 'admin' || rec.role === 'teacher') next.add('class-management');
         if (rec.role === 'admin' || rec.role === 'teacher') next.add('reports');
         if (rec.role === 'admin') {
           next.add('reports-issues');
@@ -78,6 +83,8 @@ const getRoleAccess = async (req, res) => {
           next.add('new-lesson');
           next.add('subject-topic');
         }
+        next.add('feedback');
+        next.add('study-material');
         rec.set('modules', Array.from(next));
         rec.set('version', ROLE_ACCESS_VERSION);
         await rec.save();
@@ -122,6 +129,7 @@ const saveRoleAccess = async (req, res) => {
         const record = await RoleAccess.findOne({ where: { role } });
         if (record) {
           record.set('modules', updates[role]);
+          record.set('version', ROLE_ACCESS_VERSION);
           record.changed('modules', true);
           await record.save();
         } else {
@@ -351,7 +359,7 @@ const sendClassCommunication = async (req, res) => {
 
     const students = await User.findAll({
       where: studentWhere,
-      attributes: ['id', 'ParentId']
+      attributes: ['id', 'ParentId', 'parentPhone']
     });
 
     const recipientIds = new Set();
@@ -359,6 +367,7 @@ const sendClassCommunication = async (req, res) => {
       students.forEach((student) => recipientIds.add(student.id));
     }
 
+    let parentRecipients = [];
     if (audience === 'parents' || audience === 'both') {
       const parentIds = [...new Set(students.map((student) => student.ParentId).filter(Boolean))];
       if (parentIds.length) {
@@ -368,9 +377,10 @@ const sendClassCommunication = async (req, res) => {
             role: 'parent',
             isActive: true
           },
-          attributes: ['id']
+          attributes: ['id', 'name', 'parentPhone']
         });
         parents.forEach((parent) => recipientIds.add(parent.id));
+        parentRecipients = parents;
       }
     }
 
@@ -398,6 +408,50 @@ const sendClassCommunication = async (req, res) => {
 
     if (notifications.length) {
       await Notification.bulkCreate(notifications);
+    }
+
+    // Optional: deliver parent communications via SMS + WhatsApp (Twilio) when audience includes parents.
+    if (audience === 'parents' || audience === 'both') {
+      const className = grade ? grade.name : 'All Classes';
+      const senderName = sender?.name || req.user?.name || 'Staff';
+
+      const recipientByPhone = new Map();
+      const defaultCountryCode = process.env.PHONE_DEFAULT_COUNTRY_CODE;
+      const addRecipient = (id, phone) => {
+        const normalized = normalizePhone(phone, defaultCountryCode);
+        if (!normalized) return;
+        if (!recipientByPhone.has(normalized)) {
+          recipientByPhone.set(normalized, { id, parentPhone: phone });
+        }
+      };
+
+      parentRecipients.forEach((p) => addRecipient(p.id, p.parentPhone));
+      students.forEach((s) => addRecipient(`student-${s.id}`, s.parentPhone));
+      const recipientsToMessage = Array.from(recipientByPhone.values());
+      if (!recipientsToMessage.length) {
+        return res.status(201).json({
+          success: true,
+          message: 'Class communication sent successfully',
+          communication,
+          recipients: notifications.length
+        });
+      }
+
+      setImmediate(() => {
+        sendSmsAndWhatsappToRecipients({
+          recipients: recipientsToMessage,
+          title: communication.title,
+          message: communication.message,
+          senderName,
+          className
+        }).then((result) => {
+          if (result?.skipped) {
+            console.warn('Parent SMS/WhatsApp skipped:', result?.reason);
+          }
+        }).catch((err) => {
+          console.error('Parent SMS/WhatsApp send error:', err);
+        });
+      });
     }
 
     res.status(201).json({

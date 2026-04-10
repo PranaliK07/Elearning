@@ -18,6 +18,11 @@ const uploadVideoFile = async (req, res) => {
         response.thumbnailFilename = req.files.thumbnail[0].filename;
       }
 
+      if (req.files.reading && req.files.reading[0]) {
+        response.readingUrl = `/uploads/reading/${req.files.reading[0].filename}`;
+        response.readingFilename = req.files.reading[0].filename;
+      }
+
       return res.json(response);
     }
 
@@ -111,6 +116,46 @@ const uploadBadgeImage = async (req, res) => {
   }
 };
 
+const uploadAssignmentFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const fileUrl = `/uploads/assignments/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      fileUrl,
+      filename: req.file.filename,
+      message: 'Assignment file uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Upload assignment error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const uploadReadingFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const fileUrl = `/uploads/reading/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      fileUrl,
+      filename: req.file.filename,
+      message: 'Reading material uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Upload reading material error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const deleteFile = async (req, res) => {
   try {
     const { filename } = req.params;
@@ -133,5 +178,7 @@ module.exports = {
   uploadThumbnail,
   uploadUserAvatar,
   uploadBadgeImage,
+  uploadAssignmentFile,
+  uploadReadingFile,
   deleteFile
 };

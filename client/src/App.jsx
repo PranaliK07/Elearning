@@ -12,9 +12,10 @@ import MainLayout from './components/layout/MainLayout';
 import Login from './features/auth/Login';
 import Register from './features/auth/Register';
 import DashboardRouter from './features/Dashboard/DashboardRouter';
-import LandingPage from './features/landing/LandingPage';
+//import LandingPage from './features/landing/LandingPage';
 
 import GradeSelect from './features/study/GradeSelect';
+import StudyMaterial from './features/study/StudyMaterial';
 import SubjectSelect from './features/study/SubjectSelect';
 import TopicList from './features/study/TopicList';
 import TopicContent from './features/study/TopicContent';
@@ -42,11 +43,17 @@ import SubmissionsList from './features/teacher/SubmissionsList';
 import StudentAssignmentView from './features/teacher/StudentAssignmentView';
 import TopicManager from './features/teacher/TopicManager';
 import ClassCommunication from './features/teacher/ClassCommunication';
+import TeacherAttendance from './features/attendance/TeacherAttendance';
+import StudentAttendance from './features/attendance/StudentAttendance';
+import ClassManagement from './features/classes/ClassManagement';
 import NotFound from './features/NotFound';
-import LandingPage from './features/LandingPage';
+import LandingPage from './features/landing/LandingPage';
 import HomeworkList from './features/homework/HomeworkList';
-import AboutPage from './features/AboutPage';
-import ContactPage from './features/ContactPage';
+import AboutPage from './features/landing/AboutPage';
+import ContactPage from './features/landing/ContactPage';
+import Doubts from './features/support/Doubts';
+import FeedbackPage from './features/feedback/FeedbackPage';
+import CommunicationDetails from './features/communications/CommunicationDetails';
 
 
 
@@ -57,7 +64,7 @@ function App() {
     palette: {
       mode,
       primary: {
-        main: '#3f51b5',
+        main: '#0B1F3B',
       },
       secondary: {
         main: '#f50057',
@@ -169,6 +176,15 @@ function App() {
                       <Route path="content/:contentId" element={<LessonContent />} />
                     </Route>
 
+                    <Route
+                      path="study-material"
+                      element={
+                        <ProtectedRoute roles={['student', 'teacher', 'admin']}>
+                          <StudyMaterial />
+                        </ProtectedRoute>
+                      }
+                    />
+
                     <Route path="feed" element={<InstagramFeed />} />
 
                     {/* Admin/Teacher routes */}
@@ -184,7 +200,7 @@ function App() {
                     <Route
                       path="admin/content"
                       element={
-                        <ProtectedRoute roles={['admin']}>
+                        <ProtectedRoute roles={['admin', 'teacher']}>
                           <ContentOverview />
                         </ProtectedRoute>
                       }
@@ -274,8 +290,35 @@ function App() {
                     <Route
                       path="class-communication"
                       element={
-                        <ProtectedRoute roles={['teacher', 'admin']}>
+                        <ProtectedRoute roles={['teacher', 'admin', 'student']}>
                           <ClassCommunication />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="attendance"
+                      element={
+                        <ProtectedRoute roles={['student']}>
+                          <StudentAttendance />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="attendance/manage"
+                      element={
+                        <ProtectedRoute roles={['teacher', 'admin']}>
+                          <TeacherAttendance />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="classes/manage"
+                      element={
+                        <ProtectedRoute roles={['teacher', 'admin']}>
+                          <ClassManagement />
                         </ProtectedRoute>
                       }
                     />
@@ -305,7 +348,30 @@ function App() {
                         <HomeworkList />
                       </ProtectedRoute>
                     } />
+                    <Route path="doubts" element={
+                      <ProtectedRoute roles={['student', 'teacher', 'admin']}>
+                        <Doubts />
+                      </ProtectedRoute>
+                    } />
 
+                    <Route
+                      path="feedback"
+                      element={
+                        <ProtectedRoute roles={['student', 'teacher', 'admin']}>
+                          <FeedbackPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="communications/:id"
+                      element={
+                        <ProtectedRoute roles={['student', 'parent', 'teacher', 'admin']}>
+                          <CommunicationDetails />
+                        </ProtectedRoute>
+                      }
+                    />
+                    
                     {/* Achievements */}
                     <Route path="achievements" element={<AchievementsPage />} />
 

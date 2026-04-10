@@ -31,12 +31,15 @@ const ReelPlayer = ({
   open,
   onClose,
   video,
+  onWatchTime,
   onNext,
   onPrev,
   hasMore = false,
   hasPrev = false
 }) => {
   const videoRef = useRef(null);
+  const lastTimeRef = useRef(0);
+  const watchAccumulatorRef = useRef(0);
   const touchStartY = useRef(null);
   const touchStartTime = useRef(null);
   const swipeLock = useRef(false);
@@ -48,6 +51,15 @@ const ReelPlayer = ({
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+
+  const flushWatchTime = () => {
+    if (typeof onWatchTime !== 'function') return;
+    if (watchAccumulatorRef.current >= 1) {
+      const sendSeconds = Math.floor(watchAccumulatorRef.current);
+      watchAccumulatorRef.current -= sendSeconds;
+      onWatchTime(sendSeconds);
+    }
+  };
 
   useEffect(() => {
     let timeout;
@@ -62,6 +74,11 @@ const ReelPlayer = ({
       setIsLoading(true);
       setProgress(0);
       setIsPlaying(false);
+      lastTimeRef.current = 0;
+      watchAccumulatorRef.current = 0;
+    }
+    if (!open) {
+      flushWatchTime();
     }
   }, [video, open]);
 
@@ -70,6 +87,20 @@ const ReelPlayer = ({
       const currentProgress =
         (videoRef.current.currentTime / videoRef.current.duration) * 100;
       setProgress(currentProgress || 0);
+
+      if (typeof onWatchTime === 'function') {
+        const currentTime = videoRef.current.currentTime || 0;
+        const delta = currentTime - (lastTimeRef.current || 0);
+        lastTimeRef.current = currentTime;
+        if (delta > 0 && delta < 3) {
+          watchAccumulatorRef.current += delta;
+          if (watchAccumulatorRef.current >= 5) {
+            const sendSeconds = Math.floor(watchAccumulatorRef.current);
+            watchAccumulatorRef.current -= sendSeconds;
+            onWatchTime(sendSeconds);
+          }
+        }
+      }
     }
   };
 
@@ -242,6 +273,7 @@ const ReelPlayer = ({
           onEnded={() => {
             setIsPlaying(false);
             setShowControls(true);
+            flushWatchTime();
           }}
           onClick={togglePlay}
         />

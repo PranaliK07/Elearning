@@ -1,0 +1,21 @@
+<svg width="176" height="56" viewBox="0 0 176 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="elsGradient" x1="0" y1="0" x2="176" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#667EEA"/>
+      <stop offset="1" stop-color="#764BA2"/>
+    </linearGradient>
+    <linearGradient id="elsGlow" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFD24A"/>
+      <stop offset="1" stop-color="#FF7A59"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="175" height="55" rx="16" fill="white" fill-opacity="0.02" stroke="url(#elsGradient)"/>
+  <g>
+    <rect x="10" y="10" width="36" height="36" rx="12" fill="url(#elsGradient)"/>
+    <path d="M21 26C24.2 22.2 31.8 22.2 35 26" stroke="white" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M19 31.5C23 27.5 33 27.5 37 31.5" stroke="white" stroke-width="3.2" stroke-linecap="round"/>
+    <circle cx="28" cy="18" r="4.5" fill="url(#elsGlow)"/>
+  </g>
+  <text x="60" y="36" font-family="Poppins, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#111827" letter-spacing="0.5">ELS</text>
+  <text x="98" y="36" font-family="Poppins, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#6B7280" letter-spacing="0.4">Learning</text>
+</svg>

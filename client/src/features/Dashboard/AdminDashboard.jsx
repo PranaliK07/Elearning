@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import {
   CheckCircle,
+  EventAvailable,
   People,
   Refresh,
   ReportProblem,
@@ -24,23 +25,31 @@ import {
   WarningAmber,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import api from '../../utils/axios';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [content, setContent] = useState([]);
   const [reports, setReports] = useState([]);
+  const [attendanceSummary, setAttendanceSummary] = useState({
+    date: null,
+    totals: { present: 0, absent: 0, totalMarked: 0 },
+    classes: []
+  });
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const [usersRes, contentRes, reportsRes] = await Promise.allSettled([
+      const [usersRes, contentRes, reportsRes, attendanceRes] = await Promise.allSettled([
         api.get('/api/users'),
         api.get('/api/content'),
         api.get('/api/reports'),
+        api.get('/api/attendance/summary'),
       ]);
 
       if (usersRes.status === 'fulfilled') {
@@ -78,12 +87,24 @@ const AdminDashboard = () => {
       } else {
         setReports([]);
       }
+
+      if (attendanceRes.status === 'fulfilled') {
+        const payload = attendanceRes.value.data || {};
+        setAttendanceSummary({
+          date: payload.date || null,
+          totals: payload.totals || { present: 0, absent: 0, totalMarked: 0 },
+          classes: Array.isArray(payload.classes) ? payload.classes : []
+        });
+      } else {
+        setAttendanceSummary({ date: null, totals: { present: 0, absent: 0, totalMarked: 0 }, classes: [] });
+      }
     } catch (err) {
       console.error('Error fetching admin dashboard data:', err);
       toast.error('Failed to fetch dashboard data');
       setUsers([]);
       setContent([]);
       setReports([]);
+      setAttendanceSummary({ date: null, totals: { present: 0, absent: 0, totalMarked: 0 }, classes: [] });
     } finally {
       setLoading(false);
     }
@@ -119,6 +140,9 @@ const AdminDashboard = () => {
       const status = report.status || report.reportStatus;
       return status !== 'resolved' && status !== 'Resolved';
     }).length,
+    attendanceMarkedToday: attendanceSummary?.totals?.totalMarked || 0,
+    attendancePresentToday: attendanceSummary?.totals?.present || 0,
+    attendanceAbsentToday: attendanceSummary?.totals?.absent || 0,
   };
 
   const statCards = [
@@ -128,6 +152,8 @@ const AdminDashboard = () => {
     { label: 'Teachers', value: stats.totalTeachers, icon: <People />, color: '#ef4444' },
     { label: 'Content Items', value: stats.totalContent, icon: <Source />, color: '#7c3aed' },
     { label: 'Open Reports', value: stats.openReports, icon: <ReportProblem />, color: '#db2777' },
+    { label: 'Attendance Marked (Today)', value: stats.attendanceMarkedToday, icon: <EventAvailable />, color: '#0ea5e9' },
+    { label: 'Present (Today)', value: stats.attendancePresentToday, icon: <EventAvailable />, color: '#22c55e' },
   ];
 
   const inactiveUsers = Math.max(stats.totalUsers - stats.activeUsers, 0);

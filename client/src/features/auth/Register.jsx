@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Paper,
@@ -235,6 +235,7 @@ const Register = () => {
             >
               <MenuItem value="student">Student</MenuItem>
               <MenuItem value="teacher">Teacher</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
             </TextField>
 
             {formData.role === 'student' && (
@@ -389,7 +390,7 @@ const Register = () => {
                   <Link
                     to="/login"
                     style={{
-                      color: '#3f51b5',
+                      color: '#0B1F3B',
                       textDecoration: 'none',
                       fontWeight: 'bold'
                     }}
@@ -407,7 +408,4 @@ const Register = () => {
 };
 
 export default Register;
-<<<<<<< HEAD
 
-=======
->>>>>>> 5c863f60ec7451a05e25a15d2175040663ab0e24

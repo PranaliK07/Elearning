@@ -39,7 +39,7 @@ const User = sequelize.define('User', {
     type: DataTypes.INTEGER,
     validate: {
       min: 1,
-      max: 5
+      max: 12
     }
   },
   avatar: {
@@ -69,6 +69,10 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
+  isDeleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   emailVerified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
@@ -92,6 +96,14 @@ const User = sequelize.define('User', {
     validate: {
       isEmail: true
     }
+  },
+  trialStartsAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  trialEndsAt: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   hooks: {
@@ -128,7 +140,10 @@ User.prototype.getPublicProfile = function() {
     streak: this.streak,
     lastActive: this.lastActive,
     parentPhone: this.parentPhone,
-    parentEmail: this.parentEmail
+    parentEmail: this.parentEmail,
+    isDeleted: this.isDeleted,
+    trialStartsAt: this.trialStartsAt,
+    trialEndsAt: this.trialEndsAt
   };
 };
 

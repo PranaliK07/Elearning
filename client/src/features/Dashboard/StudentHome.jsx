@@ -183,6 +183,16 @@ const StudentHome = () => {
   const { user } = useAuth();
   const { getGradeProgress, watchTimeStats } = useProgress();
 
+  const formatWatchTime = (seconds) => {
+    const totalSeconds = Number(seconds) || 0;
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
   const [subjects, setSubjects] = useState([]);
   const [classVideos, setClassVideos] = useState([]);
   const [continueVideo, setContinueVideo] = useState(null);
@@ -477,7 +487,7 @@ const StudentHome = () => {
               <Grid item xs={12}>
                 <StatCard 
                   title="Watch Time" 
-                  value={`${Math.round((watchTimeStats?.totalWatchTime || 0) / 60)}h`} 
+                  value={formatWatchTime(watchTimeStats?.totalWatchTime || 0)} 
                   icon={Schedule} 
                   color="#6C5CE7" 
                 />

@@ -23,16 +23,32 @@ export const NotificationProvider = ({ children }) => {
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   const fetchUnreadCount = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUnreadCount(0);
+      return;
+    }
     try {
       const res = await api.get('/api/notifications/unread/count');
       setUnreadCount(res.data?.count ?? 0);
     } catch (error) {
+      if (error?.response?.status === 401) {
+        setUnreadCount(0);
+        return;
+      }
       console.error('Fetch unread count error:', error);
     }
   }, []);
 
   const fetchNotifications = useCallback(async (limit = 10) => {
     setLoadingNotifications(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoadingNotifications(false);
+      return;
+    }
     try {
       const res = await api.get('/api/notifications', { params: { limit } });
       setNotifications(res.data?.notifications ?? []);
@@ -40,6 +56,11 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount(res.data.unreadCount);
       }
     } catch (error) {
+      if (error?.response?.status === 401) {
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
+      }
       console.error('Fetch notifications error:', error);
     } finally {
       setLoadingNotifications(false);

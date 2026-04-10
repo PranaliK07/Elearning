@@ -16,6 +16,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { useProgress } from '../../context/ProgressContext';
 
 import ReelPlayer from '../../components/common/ReelPlayer';
 
@@ -29,6 +30,7 @@ const normalizeMediaUrl = (src) => {
 const VideosHome = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { updateWatchTime } = useProgress();
   const videoRefs = useRef([]);
   const containerRef = useRef(null);
   const scrollFrame = useRef(null);
@@ -47,6 +49,8 @@ const VideosHome = () => {
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
   const [videoReady, setVideoReady] = useState({}); // Track ready state per video
+  const watchAccumulatorRef = useRef(0);
+  const lastTimeRef = useRef(0);
 
   useEffect(() => {
     fetchRecentVideos();
@@ -57,7 +61,19 @@ const VideosHome = () => {
 
   useEffect(() => {
     setActiveIndex(0);
+    watchAccumulatorRef.current = 0;
+    lastTimeRef.current = 0;
   }, [reelItems]);
+
+  useEffect(() => {
+    watchAccumulatorRef.current = 0;
+    lastTimeRef.current = 0;
+  }, [activeIndex]);
+
+  useEffect(() => {
+    watchAccumulatorRef.current = 0;
+    lastTimeRef.current = 0;
+  }, [openPlayer]);
 
   // Improved video playback handling
   const attemptPlay = useCallback(async (videoElement) => {
@@ -126,6 +142,21 @@ const VideosHome = () => {
       const video = videoRefs.current[index];
       if (video) {
         attemptPlay(video);
+      }
+    }
+  };
+
+  const handleInlineTimeUpdate = (index, videoId, currentTime) => {
+    if (openPlayer) return;
+    if (index !== activeIndex) return;
+    const delta = currentTime - (lastTimeRef.current || 0);
+    lastTimeRef.current = currentTime;
+    if (delta > 0 && delta < 3) {
+      watchAccumulatorRef.current += delta;
+      if (watchAccumulatorRef.current >= 5) {
+        const sendSeconds = Math.floor(watchAccumulatorRef.current);
+        watchAccumulatorRef.current -= sendSeconds;
+        updateWatchTime(videoId, sendSeconds);
       }
     }
   };
@@ -389,6 +420,7 @@ const VideosHome = () => {
                   onTouchEnd={handleTouchEnd}
                   onCanPlay={() => handleVideoCanPlay(index)}
                   onLoadedMetadata={() => handleVideoCanPlay(index)}
+                  onTimeUpdate={(e) => handleInlineTimeUpdate(index, video.id, e.currentTarget.currentTime)}
                   onError={(e) => {
                     console.error('Video load error:', e);
                   }}
@@ -569,6 +601,7 @@ const VideosHome = () => {
         open={openPlayer}
         onClose={() => setOpenPlayer(false)}
         video={selectedVideo}
+        onWatchTime={(seconds) => updateWatchTime(selectedVideo?.id, seconds)}
         onNext={handleNext}
         onPrev={handlePrev}
         hasMore={activeIndex < reelItems.length - 1}

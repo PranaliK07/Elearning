@@ -15,24 +15,79 @@ const register = async (req, res) => {
 
     const { name, email, password, role, grade, parentPhone, parentEmail } = req.body;
 
-    // Check if user exists
-    const userExists = await User.findOne({ where: { email } });
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+
+    const normalizedRole = (role || 'student').toString().trim().toLowerCase();
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedParentEmail = String(parentEmail || '').trim().toLowerCase();
+
     // Create verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: role || 'student',
-      grade,
-      verificationToken,
-      parentPhone: parentPhone || null,
-      parentEmail: parentEmail || null
+    // Create user (and parent link for student) atomically
+    const user = await sequelize.transaction(async (t) => {
+      // Check if user exists (allow restore if soft-deleted)
+      const userExists = await User.findOne({ where: { email: normalizedEmail }, transaction: t });
+      if (userExists && !userExists.isDeleted) {
+        throw Object.assign(new Error('User already exists'), { statusCode: 400 });
+      }
+
+      let linkedParent = null;
+
+      if (normalizedRole === 'student' && normalizedParentEmail) {
+        const existingByParentEmail = await User.findOne({ where: { email: normalizedParentEmail }, transaction: t });
+        if (existingByParentEmail && existingByParentEmail.role !== 'parent') {
+          throw Object.assign(new Error('Parent email is already used by another account'), { statusCode: 400 });
+        }
+
+        if (existingByParentEmail) {
+          if (existingByParentEmail.isDeleted) {
+            existingByParentEmail.isDeleted = false;
+            existingByParentEmail.isActive = true;
+          }
+          if (!existingByParentEmail.parentPhone && typeof parentPhone === 'string' && parentPhone.trim()) {
+            existingByParentEmail.parentPhone = parentPhone.trim();
+            await existingByParentEmail.save({ transaction: t });
+          }
+          linkedParent = existingByParentEmail;
+        } else {
+          const temporaryPassword = crypto.randomBytes(6).toString('hex');
+          linkedParent = await User.create({
+            name: `Parent of ${String(name || 'Student').trim()}`,
+            email: normalizedParentEmail,
+            password: temporaryPassword,
+            role: 'parent',
+            parentPhone: typeof parentPhone === 'string' && parentPhone.trim() ? parentPhone.trim() : null,
+            isActive: true
+          }, { transaction: t });
+        }
+      }
+
+      const nextValues = {
+        name,
+        email: normalizedEmail,
+        password,
+        role: normalizedRole,
+        grade,
+        verificationToken,
+        parentPhone: parentPhone || null,
+        parentEmail: normalizedParentEmail || null,
+        ParentId: linkedParent ? linkedParent.id : null,
+
+        isActive: true,
+        isDeleted: false,
+        emailVerified: false
+      };
+
+      if (userExists && userExists.isDeleted) {
+        userExists.set(nextValues);
+        // Clear any reset tokens so the restored account is clean
+        userExists.resetPasswordToken = null;
+        userExists.resetPasswordExpire = null;
+        await userExists.save({ transaction: t });
+        return userExists;
+      }
+
+      return User.create(nextValues, { transaction: t });
     });
 
     // Send verification email
@@ -65,6 +120,9 @@ const register = async (req, res) => {
 
   } catch (error) {
     console.error('Registration error:', error);
+    if (error?.statusCode === 400) {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Server error during registration' });
   }
 };
@@ -84,6 +142,10 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    if (user.isDeleted) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
     // Check if account is active
     if (!user.isActive) {
       return res.status(401).json({ message: 'Account is deactivated. Please contact admin.' });
@@ -94,6 +156,8 @@ const login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+    
+
 
     // Update last active and streak
     const today = new Date().toDateString();

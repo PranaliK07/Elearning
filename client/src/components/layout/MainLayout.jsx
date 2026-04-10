@@ -16,6 +16,7 @@ import ErrorBoundary from '../common/ErrorBoundary';
 import Sidebar from './Sidebar';
 import { resolveAvatarSrc } from '../../utils/media';
 import { useNotification } from '../../context/notificationContext';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 const MainLayout = () => {
   const { user, logout } = useAuth();
@@ -32,6 +33,7 @@ const MainLayout = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsAnchorEl, setNotificationsAnchorEl] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -54,6 +56,13 @@ const MainLayout = () => {
     if (!notification?.isRead) {
       markAsRead(notification.id);
     }
+
+    const source = notification?.data?.source;
+    const communicationId = notification?.data?.communicationId;
+    if (source === 'class_communication' && communicationId) {
+      handleNotificationsClose();
+      navigate(`/communications/${communicationId}`);
+    }
   };
 
   const handleDrawerToggle = () => {
@@ -62,8 +71,11 @@ const MainLayout = () => {
 
   const handleLogout = () => {
     handleMenuClose();
-    const shouldLogout = window.confirm('Are you sure you want to logout?');
-    if (!shouldLogout) return;
+    setLogoutDialogOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutDialogOpen(false);
     logout();
     navigate('/login');
   };
@@ -79,13 +91,22 @@ const MainLayout = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <ConfirmDialog
+        open={logoutDialogOpen}
+        title="Logout"
+        description="Are you sure you want to logout?"
+        confirmText="Logout"
+        cancelText="Cancel"
+        onClose={() => setLogoutDialogOpen(false)}
+        onConfirm={confirmLogout}
+      />
       <AppBar 
         position="fixed" 
         sx={{ 
           zIndex: (theme) => theme.zIndex.drawer + 1,
           background: mode === 'light' 
-            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-            : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+            ? 'linear-gradient(135deg, #0B1F3B 0%, #B0125B 100%)' 
+            : 'linear-gradient(135deg, #08162B 0%, #17325C 100%)'
         }}
       >
         <Toolbar>
@@ -195,7 +216,7 @@ const MainLayout = () => {
                   alignItems: 'flex-start',
                   whiteSpace: 'normal',
                   gap: 1,
-                  bgcolor: item.isRead ? 'transparent' : 'rgba(63,81,181,0.08)'
+                  bgcolor: item.isRead ? 'transparent' : 'rgba(176,18,91,0.08)'
                 }}
               >
                 <Box sx={{ flex: 1 }}>

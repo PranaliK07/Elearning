@@ -5,6 +5,8 @@ const {
   uploadVideo, 
   uploadImage, 
   uploadAvatar,
+  uploadAssignment,
+  uploadReading,
   uploadMultiple,
   optimizeImage,
   handleUploadError 
@@ -14,6 +16,8 @@ const {
   uploadThumbnail,
   uploadUserAvatar,
   uploadBadgeImage,
+  uploadAssignmentFile,
+  uploadReadingFile,
   deleteFile
 } = require('../controllers/uploadController');
 
@@ -60,6 +64,22 @@ router.post('/badge',
   optimizeImage,
   handleUploadError,
   uploadBadgeImage
+);
+
+// Assignment/doc upload (teachers, students, admins)
+router.post('/assignment',
+  authorize('teacher', 'student', 'admin'),
+  uploadAssignment.single('attachment'),
+  handleUploadError,
+  uploadAssignmentFile
+);
+
+// Reading material upload (teachers and admins)
+router.post('/reading',
+  authorize('teacher', 'admin'),
+  uploadReading.single('reading'),
+  handleUploadError,
+  uploadReadingFile
 );
 
 // Delete file

@@ -82,12 +82,22 @@ const getTeacherDashboard = async (req, res) => {
     const teacherId = req.user.id;
 
     const totalStudents = await User.count({ where: { role: 'student' } });
-    const assignmentsCount = await Assignment.count({ where: { teacherId } });
+    const assignmentsCount = await Assignment.count({
+      where: {
+        [Op.or]: [{ teacherId }, { teacherId: null }]
+      }
+    });
 
     const recentSubmissions = await Submission.findAll({
       include: [
         { model: User, as: 'student', attributes: ['id', 'name', 'avatar'] },
-        { model: Assignment, where: { teacherId }, attributes: ['id', 'title'] }
+        {
+          model: Assignment,
+          attributes: ['id', 'title', 'teacherId'],
+          where: {
+            [Op.or]: [{ teacherId }, { teacherId: null }]
+          }
+        }
       ],
       order: [['createdAt', 'DESC']],
       limit: 5

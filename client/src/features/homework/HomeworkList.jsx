@@ -12,15 +12,13 @@ import {
   TableHead,
   TableRow,
   Chip,
-  IconButton,
   useTheme,
   alpha,
   Stack,
   Skeleton,
   useMediaQuery,
   Alert,
-  AlertTitle,
-  Collapse
+  AlertTitle
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
@@ -28,9 +26,7 @@ import {
   CheckCircle as CheckCircleIcon,
   ErrorOutline as ErrorIcon,
   Today as TodayIcon,
-  Warning as WarningIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../utils/axios';
@@ -39,7 +35,6 @@ import { toast } from 'react-hot-toast';
 const HomeworkList = () => {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedSubjects, setExpandedSubjects] = useState({});
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -48,7 +43,8 @@ const HomeworkList = () => {
     try {
       setLoading(true);
       const res = await axios.get('/api/assignments');
-      setAssignments(Array.isArray(res.data) ? res.data : []);
+      const list = Array.isArray(res.data) ? res.data : [];
+      setAssignments(list);
     } catch (err) {
       console.error('Fetch assignments error', err);
       toast.error('Failed to load homework');
@@ -60,13 +56,6 @@ const HomeworkList = () => {
   useEffect(() => {
     fetchAssignments();
   }, []);
-
-  const toggleSubjectExpand = (subjectId) => {
-    setExpandedSubjects(prev => ({
-      ...prev,
-      [subjectId]: !prev[subjectId]
-    }));
-  };
 
   const getDueStatus = (dueDate) => {
     const now = new Date();
@@ -105,30 +94,17 @@ const HomeworkList = () => {
     return { label: 'Pending', color: 'warning', icon: <ScheduleIcon fontSize="small" /> };
   };
 
-  // Group assignments by Subject and then by Topic/Lesson
-  const groupedData = assignments.reduce((acc, assignment) => {
-    const subjectName = assignment.Subject?.name || 'General';
-    const lessonName = assignment.Lesson?.title || 'General';
-    
-    if (!acc[subjectName]) {
-      acc[subjectName] = {
-        subject: subjectName,
-        lessons: {}
-      };
-    }
-    
-    if (!acc[subjectName].lessons[lessonName]) {
-      acc[subjectName].lessons[lessonName] = {
-        lesson: lessonName,
-        assignments: []
-      };
-    }
-    
-    acc[subjectName].lessons[lessonName].assignments.push(assignment);
-    return acc;
-  }, {});
-
-  const subjects = Object.values(groupedData);
+  // Flattened rows for desktop table
+  const tableRows = assignments.map((assignment) => ({
+    id: assignment.id,
+    subject: assignment.Subject?.name || 'General',
+    topic: assignment.Lesson?.title || 'General',
+    title: assignment.title,
+    description: assignment.description,
+    status: getAssignmentStatus(assignment),
+    dueStatus: getDueStatus(assignment.dueDate),
+    attachmentUrl: assignment.attachmentUrl
+  }));
   
   // Calculate counts for header
   const completedCount = assignments.filter(a => !!a.Submissions?.[0]).length;
@@ -185,87 +161,37 @@ const HomeworkList = () => {
       <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
         {isMobile ? (
           <Box sx={{ p: 2 }}>
-            {subjects.map((subject) => (
-              <Box key={subject.subject} sx={{ mb: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`, borderRadius: 2 }}>
-                <Box
-                  sx={{
-                    p: 1.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    bgcolor: alpha(theme.palette.primary.main, 0.05),
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => toggleSubjectExpand(subject.subject)}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <IconButton size="small">
-                      {expandedSubjects[subject.subject] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </IconButton>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      {subject.subject}
+            {tableRows.map((row) => (
+              <Paper key={row.id} sx={{ p: 2, mb: 2, borderRadius: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
+                <Stack spacing={0.5}>
+                  <Typography variant="subtitle1" fontWeight="bold">{row.title}</Typography>
+                  <Typography variant="caption" color="textSecondary">{row.subject} • {row.topic}</Typography>
+                  {row.description && (
+                    <Typography variant="caption" color="textSecondary">
+                      {row.description.length > 90 ? `${row.description.slice(0, 90)}...` : row.description}
                     </Typography>
-                  </Box>
-                  <Chip label={`${Object.keys(subject.lessons).length} topics`} size="small" />
+                  )}
+                </Stack>
+                <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+                  <Chip icon={row.status.icon} label={row.status.label} color={row.status.color} size="small" sx={{ fontWeight: 'bold' }} />
+                  <Chip icon={row.dueStatus.icon} label={row.dueStatus.label} color={row.dueStatus.color} size="small" variant={row.dueStatus.color === 'default' ? 'outlined' : 'filled'} />
+                </Stack>
+                {row.attachmentUrl && (
+                  <Button size="small" variant="text" sx={{ mt: 1 }} onClick={() => window.open(row.attachmentUrl, '_blank')}>
+                    View attachment
+                  </Button>
+                )}
+                <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    size="small"
+                    variant={row.status.label === 'Completed' ? 'outlined' : 'contained'}
+                    color={row.status.label === 'Completed' ? 'primary' : 'secondary'}
+                    onClick={() => navigate(`/assignments/view/${row.id}`)}
+                  >
+                    {row.status.label === 'Completed' ? 'View' : 'Submit'}
+                  </Button>
                 </Box>
-
-                <Collapse in={expandedSubjects[subject.subject]}>
-                  <Box sx={{ p: 1.5 }}>
-                    {Object.values(subject.lessons).map((lesson) => (
-                      <Box key={lesson.lesson} sx={{ mb: 1.5 }}>
-                        <Typography variant="subtitle2" color="primary" fontWeight="medium" sx={{ mb: 1 }}>
-                          {lesson.lesson}
-                        </Typography>
-                        <Stack spacing={1}>
-                          {lesson.assignments.map((assignment) => {
-                            const status = getAssignmentStatus(assignment);
-                            const dueStatus = getDueStatus(assignment.dueDate);
-                            return (
-                              <Paper key={assignment.id} sx={{ p: 1.5, borderRadius: 2 }}>
-                                <Typography variant="body2" fontWeight="600" sx={{ mb: 0.5 }}>
-                                  {assignment.title}
-                                </Typography>
-                                {assignment.description && (
-                                  <Typography variant="caption" color="textSecondary">
-                                    {assignment.description.length > 80
-                                      ? `${assignment.description.substring(0, 80)}...`
-                                      : assignment.description}
-                                  </Typography>
-                                )}
-                                <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
-                                  <Chip
-                                    icon={status.icon}
-                                    label={status.label}
-                                    color={status.color}
-                                    size="small"
-                                    sx={{ fontWeight: 'bold' }}
-                                  />
-                                  <Chip
-                                    icon={dueStatus.icon}
-                                    label={dueStatus.label}
-                                    color={dueStatus.color}
-                                    size="small"
-                                    variant={dueStatus.color === 'default' ? 'outlined' : 'filled'}
-                                  />
-                                </Stack>
-                                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() => navigate(`/assignments/view/${assignment.id}`)}
-                                  >
-                                    View
-                                  </Button>
-                                </Box>
-                              </Paper>
-                            );
-                          })}
-                        </Stack>
-                      </Box>
-                    ))}
-                  </Box>
-                </Collapse>
-              </Box>
+              </Paper>
             ))}
           </Box>
         ) : (
@@ -273,112 +199,85 @@ const HomeworkList = () => {
             <Table sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-                  <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Subject</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Topic</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', width: '35%' }}>Assignment</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '18%' }}>Subject</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Topic</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '26%' }}>Assignment</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '8%' }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '12%' }}>Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '12%' }}>Attachment</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '10%' }} align="right">Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {subjects.map((subject) => (
-                  <React.Fragment key={subject.subject}>
-                    {/* Subject Row */}
-                    <TableRow 
-                      sx={{ 
-                        bgcolor: alpha(theme.palette.primary.main, 0.02),
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) }
-                      }}
-                      onClick={() => toggleSubjectExpand(subject.subject)}
-                    >
-                      <TableCell colSpan={5}>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <IconButton size="small">
-                            {expandedSubjects[subject.subject] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                          </IconButton>
-                          <Typography variant="subtitle1" fontWeight="bold">
-                            {subject.subject}
+                {tableRows.map((row) => (
+                  <TableRow key={row.id} hover>
+                    <TableCell>{row.subject}</TableCell>
+                    <TableCell>{row.topic}</TableCell>
+                    <TableCell>
+                      <Stack spacing={0.5}>
+                        <Typography variant="body2" fontWeight="500">
+                          {row.title}
+                        </Typography>
+                        {row.description && (
+                          <Typography variant="caption" color="textSecondary">
+                            {row.description.length > 60 ? `${row.description.substring(0, 60)}...` : row.description}
                           </Typography>
-                          <Chip 
-                            label={`${Object.keys(subject.lessons).length} topics`} 
-                            size="small" 
-                            sx={{ ml: 1 }}
-                          />
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                    
-                    {/* Lessons and Assignments */}
-                    <Collapse in={expandedSubjects[subject.subject]}>
-                      {Object.values(subject.lessons).map((lesson) => (
-                        <React.Fragment key={lesson.lesson}>
-                          {/* Lesson Row */}
-                          <TableRow sx={{ bgcolor: alpha(theme.palette.grey[500], 0.02) }}>
-                            <TableCell></TableCell>
-                            <TableCell colSpan={4}>
-                              <Typography variant="subtitle2" fontWeight="medium" color="primary">
-                                {lesson.lesson}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                          
-                          {/* Assignments */}
-                          {lesson.assignments.map((assignment) => {
-                            const status = getAssignmentStatus(assignment);
-                            const dueStatus = getDueStatus(assignment.dueDate);
-                            
-                            return (
-                              <TableRow key={assignment.id} hover>
-                                <TableCell></TableCell>
-                                <TableCell></TableCell>
-                                <TableCell>
-                                  <Stack spacing={0.5}>
-                                    <Typography variant="body2" fontWeight="500">
-                                      {assignment.title}
-                                    </Typography>
-                                    {assignment.description && (
-                                      <Typography variant="caption" color="textSecondary">
-                                        {assignment.description.length > 60 
-                                          ? `${assignment.description.substring(0, 60)}...` 
-                                          : assignment.description}
-                                      </Typography>
-                                    )}
-                                  </Stack>
-                                </TableCell>
-                                <TableCell>
-                                  <Chip
-                                    icon={status.icon}
-                                    label={status.label}
-                                    color={status.color}
-                                    size="small"
-                                    sx={{ 
-                                      fontWeight: 'bold',
-                                      minWidth: 90,
-                                      '& .MuiChip-icon': { fontSize: 16 }
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Chip
-                                    icon={dueStatus.icon}
-                                    label={dueStatus.label}
-                                    color={dueStatus.color}
-                                    size="small"
-                                    variant={dueStatus.color === 'default' ? 'outlined' : 'filled'}
-                                    sx={{ 
-                                      fontWeight: dueStatus.color !== 'default' ? 'bold' : 'normal',
-                                      minWidth: 85
-                                    }}
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </React.Fragment>
-                      ))}
-                    </Collapse>
-                  </React.Fragment>
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={row.status.icon}
+                        label={row.status.label}
+                        color={row.status.color}
+                        size="small"
+                        sx={{
+                          fontWeight: 'bold',
+                          minWidth: 90,
+                          '& .MuiChip-icon': { fontSize: 16 }
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={row.dueStatus.icon}
+                        label={row.dueStatus.label}
+                        color={row.dueStatus.color}
+                        size="small"
+                        variant={row.dueStatus.color === 'default' ? 'outlined' : 'filled'}
+                        sx={{
+                          fontWeight: row.dueStatus.color !== 'default' ? 'bold' : 'normal',
+                          minWidth: 85
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {row.attachmentUrl ? (
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(row.attachmentUrl, '_blank');
+                          }}
+                        >
+                          View file
+                        </Button>
+                      ) : (
+                        <Typography variant="caption" color="textSecondary">—</Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant={row.status.label === 'Completed' ? 'outlined' : 'contained'}
+                        color={row.status.label === 'Completed' ? 'primary' : 'secondary'}
+                        onClick={() => navigate(`/assignments/view/${row.id}`)}
+                      >
+                        {row.status.label === 'Completed' ? 'View' : 'Submit'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>

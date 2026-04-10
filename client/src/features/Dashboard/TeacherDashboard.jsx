@@ -208,7 +208,7 @@ const TeacherDashboard = () => {
   );
 
   const statsConfig = [
-    { label: 'Total Students', value: data.stats.totalStudents, icon: <People />, color: '#3f51b5' },
+    { label: 'Total Students', value: data.stats.totalStudents, icon: <People />, color: '#0B1F3B' },
     { label: 'Active Classes', value: data.stats.activeClasses, icon: <School />, color: '#f50057' },
     { label: 'Assignments', value: data.stats.assignments, icon: <AssignmentIcon />, color: '#4caf50' },
     { label: 'Avg Progress', value: `${data.stats.avgProgress}%`, icon: <TrendingUp />, color: '#ff9800' },
@@ -344,7 +344,16 @@ const TeacherDashboard = () => {
           {/* Students Table */}
           <Grid item xs={12} md={8}>
             <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: { xs: 'stretch', sm: 'center' },
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: 2,
+                  mb: 3
+                }}
+              >
                 <Typography variant="h6" fontWeight="bold">
                   Students Overview
                 </Typography>
@@ -364,8 +373,8 @@ const TeacherDashboard = () => {
                 />
               </Box>
 
-              <TableContainer sx={{ maxHeight: 400 }}>
-                <Table stickyHeader>
+              <TableContainer sx={{ maxHeight: 400, overflowX: 'auto' }}>
+                <Table stickyHeader sx={{ minWidth: 650 }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>Student</TableCell>

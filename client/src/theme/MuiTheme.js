@@ -3,8 +3,8 @@ import { createTheme } from '@mui/material/styles';
 const getTheme = (mode) => createTheme({
   palette: {
     mode,
-    primary: { main: '#6C63FF', contrastText: '#fff' },
-    secondary: { main: '#FF6584', contrastText: '#fff' },
+    primary: { main: '#0B1F3B', contrastText: '#fff' },
+    secondary: { main: '#B0125B', contrastText: '#fff' },
     success: { main: '#00C853' },
     background: {
       default: mode === 'light' ? '#F5F7FA' : '#121212',

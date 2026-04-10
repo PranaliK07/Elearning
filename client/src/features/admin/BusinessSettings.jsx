@@ -17,9 +17,9 @@ import api from '../../utils/axios';
 import toast from 'react-hot-toast';
 
 const defaultRoleAccess = {
-  admin: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'users', 'content', 'reports', 'reports-issues', 'settings', 'new-lesson', 'subject-topic', 'assignments', 'communications', 'business-settings']),
-  teacher: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'new-lesson', 'subject-topic', 'assignments', 'reports', 'communications']),
-  student: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'assignments']),
+  admin: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'users', 'content', 'reports', 'reports-issues', 'settings', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'communications', 'business-settings', 'doubts', 'feedback', 'study-material']),
+  teacher: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'reports', 'communications', 'feedback', 'study-material']),
+  student: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'attendance', 'doubts', 'feedback', 'study-material']),
 };
 
 const modules = [
@@ -32,14 +32,36 @@ const modules = [
   { key: 'new-lesson', label: 'New Lesson' },
   { key: 'subject-topic', label: 'Subject & Topic' },
   { key: 'assignments', label: 'Assignments' },
+  { key: 'attendance', label: 'Attendance' },
+  { key: 'class-management', label: 'Class Management' },
+  { key: 'doubts', label: 'Doubts' },
   { key: 'communications', label: 'Class Communication' },
-  { key: 'content', label: 'Content Overview' },
+  { key: 'content', label: 'Content Management' },
   { key: 'users', label: 'User Management' },
   { key: 'reports', label: 'Reports' },
   { key: 'reports-issues', label: 'Reports & Issues' },
   { key: 'settings', label: 'System Settings' },
   { key: 'business-settings', label: 'Business Settings' },
+  { key: 'feedback', label: 'Feedback & Ratings' },
+  { key: 'study-material', label: 'Study Material' },
 ];
+
+const roles = ['admin', 'teacher', 'student'];
+
+const normalizeRoleAccess = (raw) => {
+  const normalized = {};
+  roles.forEach((role) => {
+    const value = raw?.[role];
+    if (value instanceof Set) {
+      normalized[role] = new Set([...(defaultRoleAccess[role] || []), ...Array.from(value)]);
+    } else if (Array.isArray(value)) {
+      normalized[role] = new Set([...(defaultRoleAccess[role] || []), ...value]);
+    } else {
+      normalized[role] = new Set(defaultRoleAccess[role] || []);
+    }
+  });
+  return normalized;
+};
 
 const BusinessSettings = () => {
   const [roleAccess, setRoleAccess] = useState(defaultRoleAccess);
@@ -50,7 +72,7 @@ const BusinessSettings = () => {
       const saved = localStorage.getItem('roleAccess');
       if (!saved) return;
       const parsed = JSON.parse(saved);
-      setRoleAccess(Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, new Set(value)])));
+      setRoleAccess(normalizeRoleAccess(parsed));
     } catch (err) {
       console.warn('Failed to parse saved role access', err);
     }
@@ -66,7 +88,7 @@ const BusinessSettings = () => {
       try {
         const res = await api.get('/api/admin/role-access');
         if (res.data) {
-          setRoleAccess(Object.fromEntries(Object.entries(res.data).map(([key, value]) => [key, new Set(value)])));
+          setRoleAccess(normalizeRoleAccess(res.data));
         }
       } catch (err) {
         if (err?.response?.status === 404) {
@@ -80,13 +102,29 @@ const BusinessSettings = () => {
   }, [serverAccessAvailable]);
 
   const saveAccess = async () => {
+    const allowedKeys = new Set(modules.map((m) => m.key));
     const serialized = Object.fromEntries(
-      Object.entries(roleAccess).map(([role, value]) => [role, Array.from(value)])
+      roles.map((role) => {
+        const value = roleAccess[role] || defaultRoleAccess[role] || new Set();
+        return [
+          role,
+          Array.from(value).filter((key) => allowedKeys.has(key)),
+        ];
+      })
     );
 
+    let payloadForStore = serialized;
     try {
       if (serverAccessAvailable) {
-        await api.post('/api/admin/role-access', serialized);
+        const { data } = await api.post('/api/admin/role-access', serialized);
+        if (data?.roleAccess) {
+            // Merge server response with current serialized so new modules (like feedback) aren't lost
+          const merged = normalizeRoleAccess({ ...serialized, ...data.roleAccess });
+          payloadForStore = Object.fromEntries(
+            roles.map((role) => [role, Array.from(merged[role] || [])])
+          );
+          setRoleAccess(merged);
+        }
         toast.success('Access saved to server');
       } else {
         throw { response: { status: 404 } };
@@ -101,7 +139,7 @@ const BusinessSettings = () => {
         toast.error('Save failed; stored locally for now');
       }
     } finally {
-      localStorage.setItem('roleAccess', JSON.stringify(serialized));
+      localStorage.setItem('roleAccess', JSON.stringify(payloadForStore));
       window.dispatchEvent(new Event('roleAccessUpdated'));
     }
   };

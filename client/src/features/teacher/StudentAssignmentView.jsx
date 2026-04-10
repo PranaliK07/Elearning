@@ -13,7 +13,7 @@ import {
   Avatar
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowBack, Assignment, CloudUpload, TaskAlt } from '@mui/icons-material';
+import { ArrowBack, Assignment, CloudUpload, TaskAlt, InsertDriveFile } from '@mui/icons-material';
 import axios from '../../utils/axios.js';
 import { toast } from 'react-hot-toast';
 import { validateRequiredText } from '../../utils/validation';
@@ -24,6 +24,8 @@ const StudentAssignmentView = () => {
   const [assignment, setAssignment] = useState(null);
   const [submission, setSubmission] = useState(null);
   const [content, setContent] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [contentError, setContentError] = useState('');
 
@@ -38,6 +40,7 @@ const StudentAssignmentView = () => {
       setAssignment(assignmentRes.data || null);
       setSubmission(submissionRes.data || null);
       setContent(submissionRes.data?.content || '');
+      setFileUrl(submissionRes.data?.fileUrl || '');
     } catch {
       toast.error('Failed to load assignment');
       setAssignment(null);
@@ -52,18 +55,49 @@ const StudentAssignmentView = () => {
   }, [assignmentId]);
 
   const handleSubmit = async () => {
-    const error = validateRequiredText(content, 'Submission', 10);
-    setContentError(error);
-    if (error) {
-      toast.error(error);
+    const hasText = content && content.trim().length >= 1;
+    if (!hasText && !fileUrl) {
+      const err = 'Add some text or upload a file before submitting';
+      setContentError(err);
+      toast.error(err);
       return;
     }
+    const error = hasText ? validateRequiredText(content, 'Submission', 10) : '';
+    setContentError(error);
+    if (error) return;
     try {
-      await axios.post(`/api/assignments/${assignmentId}/submissions`, { content: content.trim() });
+      await axios.post(`/api/assignments/${assignmentId}/submissions`, { content: content.trim(), fileUrl });
       toast.success('Assignment submitted successfully!');
       fetchAssignmentDetails();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Submission failed');
+    }
+  };
+
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/png', 'image/jpeg'];
+    if (!allowed.includes(file.type)) {
+      toast.error('Upload PDF, DOC, PPT, XLS, or image files');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('File must be under 20MB');
+      return;
+    }
+    const form = new FormData();
+    form.append('attachment', file);
+    try {
+      setUploading(true);
+      const { data } = await axios.post('/api/upload/assignment', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setFileUrl(data.fileUrl);
+      toast.success('File uploaded');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -80,7 +114,7 @@ const StudentAssignmentView = () => {
         <Typography variant="h4" fontWeight="bold">Assignment Details</Typography>
       </Box>
 
-      <Paper sx={{ p: 4, borderRadius: 4, mb: 4, borderTop: '8px solid #3f51b5' }}>
+      <Paper sx={{ p: 4, borderRadius: 4, mb: 4, borderTop: '8px solid #0B1F3B' }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <Box display="flex" justifyContent="space-between" alignItems="flex-start">
@@ -99,6 +133,14 @@ const StudentAssignmentView = () => {
             <Typography variant="body1" color="textSecondary" sx={{ whiteSpace: 'pre-wrap' }}>
               {assignment.description || 'No instructions provided.'}
             </Typography>
+            {assignment.attachmentUrl && (
+              <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <InsertDriveFile color="primary" />
+                <Button variant="text" onClick={() => window.open(assignment.attachmentUrl, '_blank')}>
+                  View attached file
+                </Button>
+              </Box>
+            )}
           </Grid>
         </Grid>
       </Paper>
@@ -142,12 +184,27 @@ const StudentAssignmentView = () => {
             error={!!contentError}
             helperText={contentError}
           />
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Button startIcon={<CloudUpload />} variant="outlined" component="label" disabled>
-              Upload File
-              <input type="file" hidden />
+          <Box display="flex" alignItems="center" gap={2} mb={2}>
+            <Button
+              startIcon={<CloudUpload />}
+              variant="outlined"
+              component="label"
+              disabled={alreadySubmitted || uploading}
+            >
+              {uploading ? 'Uploading...' : 'Upload PDF/Doc'}
+              <input type="file" hidden accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={(e) => handleFileUpload(e.target.files?.[0])} />
             </Button>
-            <Button variant="contained" size="large" disabled={!content.trim() || alreadySubmitted} onClick={handleSubmit} sx={{ px: 4, borderRadius: 5 }}>
+            {fileUrl && (
+              <>
+                <Button variant="text" onClick={() => window.open(fileUrl, '_blank')}>View uploaded</Button>
+                {!alreadySubmitted && (
+                  <Button color="warning" variant="text" onClick={() => setFileUrl('')}>Remove</Button>
+                )}
+              </>
+            )}
+          </Box>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Button variant="contained" size="large" disabled={( !content.trim() && !fileUrl) || alreadySubmitted} onClick={handleSubmit} sx={{ px: 4, borderRadius: 5 }}>
               {alreadySubmitted ? 'Submitted' : 'Submit Assignment'}
             </Button>
           </Box>

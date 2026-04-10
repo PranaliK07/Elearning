@@ -17,9 +17,17 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'User not found' });
       }
 
+      if (req.user.isDeleted) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+
       if (!req.user.isActive) {
         return res.status(401).json({ message: 'Account is deactivated' });
       }
+      
+
+
+
 
       // Update last active
       req.user.lastActive = new Date();

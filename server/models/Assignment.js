@@ -23,6 +23,10 @@ const Assignment = sequelize.define('Assignment', {
     type: DataTypes.ENUM('active', 'draft', 'closed'),
     defaultValue: 'active'
   },
+  attachmentUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   LessonId: {
     type: DataTypes.INTEGER,
     allowNull: true,

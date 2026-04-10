@@ -314,23 +314,23 @@ const TopicManager = () => {
       <Paper sx={{ p: 3, borderRadius: 3 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={3}>
-<<<<<<< HEAD
-            <TextField select fullWidth label="Class" value={form.gradeId} onChange={(e) => { setForm((prev) => ({ ...prev, gradeId: e.target.value })); setErrors((prev) => ({ ...prev, gradeId: '' })); }} error={!!errors.gradeId} helperText={errors.gradeId}>
-              {grades.map((g) => <MenuItem key={g.id} value={g.id}>Class {g.level} - {g.name}</MenuItem>)}
-=======
             <TextField
               select
               fullWidth
               label="Class"
               value={form.gradeId}
-              onChange={(e) => setForm((prev) => ({ ...prev, gradeId: String(e.target.value) }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, gradeId: String(e.target.value) }));
+                setErrors((prev) => ({ ...prev, gradeId: '' }));
+              }}
+              error={!!errors.gradeId}
+              helperText={errors.gradeId}
             >
               {grades.map((g) => (
                 <MenuItem key={g.id} value={String(g.id)}>
                   Class {g.level} - {g.name}
                 </MenuItem>
               ))}
->>>>>>> 5c863f60ec7451a05e25a15d2175040663ab0e24
             </TextField>
           </Grid>
           <Grid item xs={12} sm={6} md={5}>
@@ -341,24 +341,24 @@ const TopicManager = () => {
           </Grid>
 
           <Grid item xs={12} sm={6} md={4}>
-<<<<<<< HEAD
-            <TextField select fullWidth label="Subject" value={form.subjectId} onChange={(e) => { setForm((prev) => ({ ...prev, subjectId: e.target.value })); setErrors((prev) => ({ ...prev, subjectId: '' })); }} disabled={!form.gradeId} error={!!errors.subjectId} helperText={errors.subjectId}>
-              {subjects.map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
-=======
             <TextField
               select
               fullWidth
               label="Subject"
               value={form.subjectId}
-              onChange={(e) => setForm((prev) => ({ ...prev, subjectId: String(e.target.value) }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, subjectId: String(e.target.value) }));
+                setErrors((prev) => ({ ...prev, subjectId: '' }));
+              }}
               disabled={!form.gradeId}
+              error={!!errors.subjectId}
+              helperText={errors.subjectId}
             >
               {subjects.map((s) => (
                 <MenuItem key={s.id} value={String(s.id)}>
                   {s.name}
                 </MenuItem>
               ))}
->>>>>>> 5c863f60ec7451a05e25a15d2175040663ab0e24
             </TextField>
           </Grid>
           <Grid item xs={12} sm={6} md={4}>

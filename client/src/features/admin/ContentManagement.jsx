@@ -55,12 +55,15 @@ const ContentManagement = () => {
         subjectId: '',
         topicId: '',
         isPremium: false,
+        isPublished: true,
         order: 0
     });
 
     const [videoFile, setVideoFile] = useState(null);
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [videoPreview, setVideoPreview] = useState(null);
+    const [readingFile, setReadingFile] = useState(null);
+    const [readingPreview, setReadingPreview] = useState(null);
     const [thumbnailPreview, setThumbnailPreview] = useState(null);
     const [topicDialogOpen, setTopicDialogOpen] = useState(false);
     const [newTopic, setNewTopic] = useState({
@@ -140,6 +143,15 @@ const ContentManagement = () => {
             setVideoFile(file);
             setVideoPreview(URL.createObjectURL(file));
             setErrors((prev) => ({ ...prev, video: '' }));
+        } else if (e.target.name === 'reading') {
+            const fileError = file ? (file.type !== 'application/pdf' ? 'Only PDF files are allowed' : '') : '';
+            if (fileError) {
+                setErrors((prev) => ({ ...prev, reading: fileError }));
+                return;
+            }
+            setReadingFile(file);
+            setReadingPreview(file.name);
+            setErrors((prev) => ({ ...prev, reading: '' }));
         } else {
             const fileError = validateImageFile(file, 'Thumbnail');
             if (fileError) {
@@ -275,6 +287,9 @@ const ContentManagement = () => {
             const videoError = validateVideoFile(videoFile);
             if (videoError) nextErrors.video = videoError;
         }
+        if (formData.type === 'reading') {
+            if (!readingFile) nextErrors.reading = 'Reading material file is required';
+        }
         setErrors(nextErrors);
         if (Object.keys(nextErrors).length > 0) {
             toast.error('Please fix the highlighted fields');
@@ -301,23 +316,25 @@ const ContentManagement = () => {
                     questions: parsedQuiz.questions,
                     timeLimit: parsedQuiz.timeLimit || 10,
                     passingScore: parsedQuiz.passingScore || 70,
-                    maxAttempts: parsedQuiz.maxAttempts || 3
+                    maxAttempts: parsedQuiz.maxAttempts || 3,
+                    isPublished: true
                 });
 
                 toast.success('Quiz created successfully!');
-                navigate('/dashboard');
+                navigate('/admin/content');
                 return;
             }
 
             const uploadData = new FormData();
             if (videoFile) uploadData.append('video', videoFile);
+            if (readingFile) uploadData.append('reading', readingFile);
             if (thumbnailFile) uploadData.append('thumbnail', thumbnailFile);
 
             // 1. Upload files
             let videoUrl = '';
             let thumbnailUrl = '';
 
-            if (videoFile || thumbnailFile) {
+            if (videoFile || thumbnailFile || readingFile) {
                 const uploadRes = await axios.post('/api/upload/content', uploadData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                     onUploadProgress: (progressEvent) => {
@@ -327,6 +344,10 @@ const ContentManagement = () => {
                 });
                 videoUrl = uploadRes.data.videoUrl;
                 thumbnailUrl = uploadRes.data.thumbnailUrl;
+                const readingUrl = uploadRes.data.readingUrl;
+                if (readingUrl) {
+                    formData.readingMaterial = readingUrl;
+                }
             }
 
             // 2. Create content
@@ -341,7 +362,7 @@ const ContentManagement = () => {
             });
 
             toast.success('Content uploaded successfully! 🎉');
-            navigate('/dashboard');
+            navigate('/admin/content');
         } catch (error) {
             console.error(error);
             toast.error(error.response?.data?.message || error.message || 'Upload failed');
@@ -513,6 +534,53 @@ const ContentManagement = () => {
                                     {errors.video && (
                                         <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
                                             {errors.video}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Grid>
+                        )}
+
+                        {/* Reading Upload Section */}
+                        {formData.type === 'reading' && (
+                            <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom>Reading Material (PDF)</Typography>
+                                <Box
+                                    sx={{
+                                        border: '2px dashed',
+                                        borderColor: 'divider',
+                                        borderRadius: 2,
+                                        p: 4,
+                                        textAlign: 'center',
+                                        bgcolor: 'background.default',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    <input
+                                        type="file"
+                                        accept=".pdf"
+                                        style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'pointer' }}
+                                        name="reading"
+                                        onChange={handleFileChange}
+                                    />
+                                    {readingPreview ? (
+                                        <Box>
+                                            <Description sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                                            <Typography>{readingFile.name}</Typography>
+                                            <Button size="small" color="error" onClick={() => {
+                                                setReadingPreview(null);
+                                                setReadingFile(null);
+                                            }}>Remove</Button>
+                                        </Box>
+                                    ) : (
+                                        <Box>
+                                            <CloudUpload sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                                            <Typography>Click or drag PDF file to upload</Typography>
+                                            <Typography variant="caption" color="textSecondary">Max size: 50MB</Typography>
+                                        </Box>
+                                    )}
+                                    {errors.reading && (
+                                        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                                            {errors.reading}
                                         </Typography>
                                     )}
                                 </Box>

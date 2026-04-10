@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   PlayCircle as PlayIcon,
   MenuBook as StudyIcon,
-  Home as HomeIcon
+  Timeline as ProgressIcon
 } from '@mui/icons-material';
 
 const BottomNav = () => {
@@ -14,7 +14,7 @@ const BottomNav = () => {
   const getValue = () => {
     if (location.pathname.startsWith('/play')) return 0;
     if (location.pathname.startsWith('/study')) return 1;
-    if (location.pathname.startsWith('/dashboard')) return 2;
+    if (location.pathname.startsWith('/progress')) return 2;
     return 2;
   };
 
@@ -42,16 +42,16 @@ const BottomNav = () => {
               navigate('/study');
               break;
             case 2:
-              navigate('/dashboard');
+              navigate('/progress');
               break;
             default:
               break;
           }
         }}
       >
-        <BottomNavigationAction label="Quize" icon={<PlayIcon />} />
+        <BottomNavigationAction label="Play" icon={<PlayIcon />} />
         <BottomNavigationAction label="Study" icon={<StudyIcon />} />
-        <BottomNavigationAction label="Home" icon={<HomeIcon />} />
+        <BottomNavigationAction label="Progress" icon={<ProgressIcon />} />
       </BottomNavigation>
     </Paper>
   );

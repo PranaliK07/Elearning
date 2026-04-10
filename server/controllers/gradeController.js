@@ -1,5 +1,33 @@
 const { Grade, Subject, User } = require('../models');
 
+const sendServerError = (res, context, error) => {
+  console.error(`${context} error:`, error);
+
+  if (error?.name === 'SequelizeValidationError') {
+    const first = error?.errors?.[0];
+    return res.status(400).json({
+      message: first?.message || 'Validation error'
+    });
+  }
+
+  if (error?.name === 'SequelizeUniqueConstraintError') {
+    return res.status(400).json({
+      message: 'Duplicate entry'
+    });
+  }
+
+  const isDev = process.env.NODE_ENV === 'development';
+  return res.status(500).json({
+    message: 'Server error',
+    ...(isDev && {
+      context,
+      details: error?.message,
+      sqlMessage: error?.original?.sqlMessage || error?.parent?.sqlMessage,
+      code: error?.original?.code || error?.parent?.code
+    })
+  });
+};
+
 const ensureDefaultGrades = async () => {
   const existing = await Grade.findAll({ attributes: ['level'] });
   const existingLevels = new Set(existing.map((g) => g.level));
@@ -19,27 +47,71 @@ const ensureDefaultGrades = async () => {
 
 const getGrades = async (req, res) => {
   try {
-    await ensureDefaultGrades();
-    const grades = await Grade.findAll({
-      order: [['level', 'ASC']],
-      include: [{
-        model: Subject,
-        attributes: ['id', 'name', 'icon']
-      }]
-    });
+    try {
+      await ensureDefaultGrades();
+    } catch (seedError) {
+      console.warn('ensureDefaultGrades failed:', seedError?.message);
+    }
 
-    res.json(grades);
+    const queryWithSubjects = () =>
+      Grade.findAll({
+        order: [['level', 'ASC']],
+        include: [
+          {
+            model: Subject,
+            attributes: ['id', 'name', 'icon'],
+            required: false
+          }
+        ]
+      });
+
+    try {
+      const grades = await queryWithSubjects();
+      return res.json(grades);
+    } catch (joinError) {
+      const code = joinError?.original?.code || joinError?.parent?.code;
+      const sqlMessage = joinError?.original?.sqlMessage || joinError?.parent?.sqlMessage || '';
+      const mightBeSchemaMismatch =
+        code === 'ER_BAD_FIELD_ERROR' ||
+        code === 'ER_NO_SUCH_TABLE' ||
+        /Unknown column/i.test(sqlMessage) ||
+        /doesn't exist/i.test(sqlMessage);
+
+      if (!mightBeSchemaMismatch) {
+        throw joinError;
+      }
+
+      console.warn('Grades join failed, falling back without subjects:', {
+        code,
+        sqlMessage
+      });
+
+      const grades = await Grade.findAll({ order: [['level', 'ASC']] });
+      return res.json(grades);
+    }
   } catch (error) {
-    console.error('Get grades error:', error);
-    res.status(500).json({ message: 'Server error' });
+    return sendServerError(res, 'Get grades', error);
   }
 };
 
 const getGrade = async (req, res) => {
   try {
-    const grade = await Grade.findByPk(req.params.id, {
-      include: [Subject]
-    });
+    let grade;
+    try {
+      grade = await Grade.findByPk(req.params.id, { include: [Subject] });
+    } catch (joinError) {
+      const code = joinError?.original?.code || joinError?.parent?.code;
+      const sqlMessage = joinError?.original?.sqlMessage || joinError?.parent?.sqlMessage || '';
+      const mightBeSchemaMismatch =
+        code === 'ER_BAD_FIELD_ERROR' ||
+        code === 'ER_NO_SUCH_TABLE' ||
+        /Unknown column/i.test(sqlMessage) ||
+        /doesn't exist/i.test(sqlMessage);
+
+      if (!mightBeSchemaMismatch) throw joinError;
+      console.warn('Grade join failed, falling back without subjects:', { code, sqlMessage });
+      grade = await Grade.findByPk(req.params.id);
+    }
 
     if (!grade) {
       return res.status(404).json({ message: 'Grade not found' });
@@ -47,8 +119,7 @@ const getGrade = async (req, res) => {
 
     res.json(grade);
   } catch (error) {
-    console.error('Get grade error:', error);
-    res.status(500).json({ message: 'Server error' });
+    return sendServerError(res, 'Get grade', error);
   }
 };
 
@@ -77,8 +148,7 @@ const createGrade = async (req, res) => {
       grade
     });
   } catch (error) {
-    console.error('Create grade error:', error);
-    res.status(500).json({ message: 'Server error' });
+    return sendServerError(res, 'Create grade', error);
   }
 };
 
@@ -107,8 +177,7 @@ const updateGrade = async (req, res) => {
       grade
     });
   } catch (error) {
-    console.error('Update grade error:', error);
-    res.status(500).json({ message: 'Server error' });
+    return sendServerError(res, 'Update grade', error);
   }
 };
 
@@ -124,8 +193,7 @@ const deleteGrade = async (req, res) => {
 
     res.json({ success: true, message: 'Grade deleted successfully' });
   } catch (error) {
-    console.error('Delete grade error:', error);
-    res.status(500).json({ message: 'Server error' });
+    return sendServerError(res, 'Delete grade', error);
   }
 };
 
@@ -141,8 +209,7 @@ const getGradeSubjects = async (req, res) => {
 
     res.json(grade.Subjects);
   } catch (error) {
-    console.error('Get grade subjects error:', error);
-    res.status(500).json({ message: 'Server error' });
+    return sendServerError(res, 'Get grade subjects', error);
   }
 };
 
@@ -165,8 +232,7 @@ const getGradeStats = async (req, res) => {
       totalContent: 0 // You can calculate this
     });
   } catch (error) {
-    console.error('Get grade stats error:', error);
-    res.status(500).json({ message: 'Server error' });
+    return sendServerError(res, 'Get grade stats', error);
   }
 };
 

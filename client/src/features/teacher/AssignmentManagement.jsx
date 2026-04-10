@@ -37,7 +37,8 @@ const emptyForm = {
   description: '',
   dueDate: '',
   subjectId: '',
-  gradeId: ''
+  gradeId: '',
+  attachmentUrl: ''
 };
 
 const AssignmentManagement = () => {
@@ -48,6 +49,7 @@ const AssignmentManagement = () => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -95,7 +97,8 @@ const AssignmentManagement = () => {
       description: assignment.description || '',
       dueDate: assignment.dueDate ? assignment.dueDate.slice(0, 10) : '',
       subjectId: assignment.subjectId || '',
-      gradeId: assignment.gradeId || ''
+      gradeId: assignment.gradeId || '',
+      attachmentUrl: assignment.attachmentUrl || ''
     });
     setOpen(true);
   };
@@ -145,6 +148,35 @@ const AssignmentManagement = () => {
     }
   };
 
+  const handleUploadAttachment = async (file) => {
+    if (!file) return;
+    const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/png', 'image/jpeg'];
+    if (!allowed.includes(file.type)) {
+      toast.error('Upload PDF, DOC, PPT, XLS, or image files');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('File must be under 20MB');
+      return;
+    }
+
+    const form = new FormData();
+    form.append('attachment', file);
+
+    try {
+      setUploadingFile(true);
+      const { data } = await axios.post('/api/upload/assignment', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setFormData((prev) => ({ ...prev, attachmentUrl: data.fileUrl }));
+      toast.success('Attachment uploaded');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Upload failed');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const handleDelete = async (assignment) => {
     const confirmed = window.confirm(`Delete assignment "${assignment.title}"?`);
     if (!confirmed) return;
@@ -177,6 +209,7 @@ const AssignmentManagement = () => {
                 <TableCell sx={{ color: 'white' }}>Subject</TableCell>
                 <TableCell sx={{ color: 'white' }}>Grade</TableCell>
                 <TableCell sx={{ color: 'white' }}>Due Date</TableCell>
+                <TableCell sx={{ color: 'white' }}>Attachment</TableCell>
                 <TableCell sx={{ color: 'white' }}>Status</TableCell>
                 <TableCell sx={{ color: 'white' }}>Submissions</TableCell>
                 <TableCell align="right" sx={{ color: 'white' }}>Actions</TableCell>
@@ -190,6 +223,15 @@ const AssignmentManagement = () => {
                     <TableCell>{assignment.Subject?.name || '-'}</TableCell>
                     <TableCell>{assignment.Grade?.name || '-'}</TableCell>
                     <TableCell>{assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell>
+                      {assignment.attachmentUrl ? (
+                        <Button size="small" variant="text" onClick={() => window.open(assignment.attachmentUrl, '_blank')}>
+                          View
+                        </Button>
+                      ) : (
+                        <Typography variant="body2" color="textSecondary">—</Typography>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={(assignment.Submissions?.length || 0) > 0 ? 'Completed' : 'Pending'}
@@ -248,6 +290,27 @@ const AssignmentManagement = () => {
               </Grid>
             </Grid>
             <TextField label="Due Date" type="date" fullWidth InputLabelProps={{ shrink: true }} value={formData.dueDate} onChange={(e) => { setFormData({ ...formData, dueDate: e.target.value }); setErrors((prev) => ({ ...prev, dueDate: '' })); }} error={!!errors.dueDate} helperText={errors.dueDate} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Button
+                variant="outlined"
+                component="label"
+                disabled={uploadingFile}
+              >
+                {uploadingFile ? 'Uploading...' : 'Attach PDF/Doc'}
+                <input
+                  type="file"
+                  hidden
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  onChange={(e) => handleUploadAttachment(e.target.files?.[0])}
+                />
+              </Button>
+              {formData.attachmentUrl && (
+                <>
+                  <Button variant="text" onClick={() => window.open(formData.attachmentUrl, '_blank')}>View current</Button>
+                  <Button color="warning" variant="text" onClick={() => setFormData((prev) => ({ ...prev, attachmentUrl: '' }))}>Remove</Button>
+                </>
+              )}
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
