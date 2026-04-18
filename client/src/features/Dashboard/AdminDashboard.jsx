@@ -8,12 +8,12 @@ import {
   CircularProgress,
   Container,
   Divider,
-  Grid,
   LinearProgress,
   Paper,
   Stack,
   Typography,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   CheckCircle,
   EventAvailable,
@@ -33,6 +33,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [content, setContent] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
   const [reports, setReports] = useState([]);
   const [attendanceSummary, setAttendanceSummary] = useState({
     date: null,
@@ -45,11 +46,12 @@ const AdminDashboard = () => {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const [usersRes, contentRes, reportsRes, attendanceRes] = await Promise.allSettled([
+      const [usersRes, contentRes, reportsRes, attendanceRes, quizzesRes] = await Promise.allSettled([
         api.get('/api/users'),
         api.get('/api/content'),
         api.get('/api/reports'),
         api.get('/api/attendance/summary'),
+        api.get('/api/quiz'),
       ]);
 
       if (usersRes.status === 'fulfilled') {
@@ -67,16 +69,21 @@ const AdminDashboard = () => {
 
         if (Array.isArray(payload)) contentData = payload;
         else if (payload?.content) contentData = payload.content;
+        else if (payload?.contents) contentData = payload.contents;
         else if (payload?.data) contentData = payload.data;
         else if (payload?.items) contentData = payload.items;
-        else if (payload?.lessons) contentData = payload.lessons;
-        else if (payload?.courses) contentData = payload.courses;
-        else if (payload?.materials) contentData = payload.materials;
-        else if (payload && (payload.id || payload._id)) contentData = [payload];
-
+        
         setContent(contentData);
       } else {
         setContent([]);
+      }
+
+      if (quizzesRes.status === 'fulfilled') {
+        const payload = quizzesRes.value.data;
+        const quizData = Array.isArray(payload) ? payload : (payload?.quizzes || []);
+        setQuizzes(quizData);
+      } else {
+        setQuizzes([]);
       }
 
       if (reportsRes.status === 'fulfilled') {
@@ -101,10 +108,6 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error('Error fetching admin dashboard data:', err);
       toast.error('Failed to fetch dashboard data');
-      setUsers([]);
-      setContent([]);
-      setReports([]);
-      setAttendanceSummary({ date: null, totals: { present: 0, absent: 0, totalMarked: 0 }, classes: [] });
     } finally {
       setLoading(false);
     }
@@ -135,7 +138,7 @@ const AdminDashboard = () => {
       const role = user.role || user.userRole;
       return role === 'teacher' || role === 'Teacher';
     }).length,
-    totalContent: content.length,
+    totalContent: content.length + quizzes.length,
     openReports: reports.filter((report) => {
       const status = report.status || report.reportStatus;
       return status !== 'resolved' && status !== 'Resolved';
@@ -150,19 +153,19 @@ const AdminDashboard = () => {
     { label: 'Active Users', value: stats.activeUsers, icon: <CheckCircle />, color: '#16a34a' },
     { label: 'Students', value: stats.totalStudents, icon: <School />, color: '#f59e0b' },
     { label: 'Teachers', value: stats.totalTeachers, icon: <People />, color: '#ef4444' },
-    { label: 'Content Items', value: stats.totalContent, icon: <Source />, color: '#7c3aed' },
+    { label: 'Total Learning Assets', value: stats.totalContent, icon: <Source />, color: '#7c3aed' },
     { label: 'Open Reports', value: stats.openReports, icon: <ReportProblem />, color: '#db2777' },
-    { label: 'Attendance Marked (Today)', value: stats.attendanceMarkedToday, icon: <EventAvailable />, color: '#0ea5e9' },
-    { label: 'Present (Today)', value: stats.attendancePresentToday, icon: <EventAvailable />, color: '#22c55e' },
+    { label: 'Attendance (Today)', value: stats.attendanceMarkedToday, icon: <EventAvailable />, color: '#0ea5e9' },
   ];
 
   const inactiveUsers = Math.max(stats.totalUsers - stats.activeUsers, 0);
   const contentBreakdown = {
     videos: content.filter((item) => item.type === 'video' || item.contentType === 'video').length,
-    quizzes: content.filter((item) => item.type === 'quiz' || item.contentType === 'quiz').length,
-    assignments: content.filter((item) => item.type === 'assignment' || item.contentType === 'assignment').length,
-    published: content.filter((item) => item.status === 'published').length,
+    quizzes: quizzes.length,
+    assignments: content.filter((item) => item.type === 'assignment' || item.contentType === 'assignment' || item.type === 'reading').length,
+    published: content.filter((item) => item.status === 'published' || item.isPublished).length + quizzes.filter(q => q.isPublished).length,
   };
+
   const recentUsers = [...users]
     .sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0))
     .slice(0, 5);
@@ -198,7 +201,7 @@ const AdminDashboard = () => {
 
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {statCards.map((card) => (
-            <Grid item xs={12} sm={6} md={4} key={card.label}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={card.label}>
               <Card sx={{ borderRadius: 3, color: 'white', bgcolor: card.color, height: '100%' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -219,13 +222,13 @@ const AdminDashboard = () => {
         </Grid>
 
         <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <Paper sx={{ p: 3, borderRadius: 3, height: '100%' }}>
               <Typography variant="h6" gutterBottom>
                 Platform Overview
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="subtitle1" gutterBottom>
@@ -256,26 +259,26 @@ const AdminDashboard = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="subtitle1" gutterBottom>
                         Content Summary
                       </Typography>
                       <Grid container spacing={2}>
-                        <Grid item xs={6}>
+                        <Grid size={6}>
                           <Typography variant="body2" color="textSecondary">Videos</Typography>
                           <Typography variant="h5">{contentBreakdown.videos}</Typography>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={6}>
                           <Typography variant="body2" color="textSecondary">Quizzes</Typography>
                           <Typography variant="h5">{contentBreakdown.quizzes}</Typography>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={6}>
                           <Typography variant="body2" color="textSecondary">Assignments</Typography>
                           <Typography variant="h5">{contentBreakdown.assignments}</Typography>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={6}>
                           <Typography variant="body2" color="textSecondary">Published</Typography>
                           <Typography variant="h5">{contentBreakdown.published}</Typography>
                         </Grid>
@@ -283,7 +286,7 @@ const AdminDashboard = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="subtitle1" gutterBottom>
@@ -326,7 +329,7 @@ const AdminDashboard = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Stack spacing={3}>
               <Paper sx={{ p: 3, borderRadius: 3 }}>
                 <Typography variant="h6" gutterBottom>

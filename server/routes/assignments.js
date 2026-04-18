@@ -126,13 +126,13 @@ router.get('/', protect, async (req, res) => {
       include: req.user.role === 'student' ? [
         { model: Subject, attributes: ['name'] },
         { model: Grade, attributes: ['name'] },
-        { model: Lesson, attributes: ['id', 'title'] },
+        { model: Lesson, attributes: ['id', 'title', 'TopicId'] },
         { model: User, as: 'teacher', attributes: ['name'] },
         { model: Submission, where: { studentId: req.user.id }, required: false }
       ] : [
         { model: Subject, attributes: ['name'] },
         { model: Grade, attributes: ['name'] },
-        { model: Lesson, attributes: ['id', 'title'] },
+        { model: Lesson, attributes: ['id', 'title', 'TopicId'] },
         { model: User, as: 'teacher', attributes: ['name'] },
         { model: Submission, attributes: ['id', 'studentId'], required: false }
       ],

@@ -198,15 +198,27 @@ const getMe = async (req, res) => {
       include: [
         {
           model: Achievement,
+          required: false,
           through: { attributes: [] }
         }
       ]
     });
 
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
     res.json(user);
   } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Get profile error details:', {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: 'Server error loading profile',
+      error: error.message
+    });
   }
 };
 

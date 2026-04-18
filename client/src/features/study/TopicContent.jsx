@@ -13,7 +13,13 @@ import {
   CircularProgress,
   Chip
 } from '@mui/material';
-import { PlayCircle, Quiz, Assignment, ArrowBack } from '@mui/icons-material';
+import { 
+  PlayCircle, 
+  Psychology as PsychologyIcon, 
+  Assignment, 
+  ArrowBack,
+  AccessTime
+} from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from '../../utils/axios';
@@ -28,6 +34,7 @@ const TopicContent = () => {
   const [topic, setTopic] = useState(null);
   const [contents, setContents] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
+  const [assignments, setAssignments] = useState([]);
 
   useEffect(() => {
     fetchTopicData();
@@ -62,19 +69,27 @@ const TopicContent = () => {
   const fetchTopicData = async () => {
     try {
       setLoading(true);
-      const [topicRes, contentRes, quizRes] = await Promise.all([
+      const [topicRes, contentRes, quizRes, assignmentRes] = await Promise.all([
         axios.get(`/api/topics/${topicId}`),
         axios.get(`/api/topics/${topicId}/contents`),
-        axios.get(`/api/topics/${topicId}/quizzes`)
+        axios.get(`/api/topics/${topicId}/quizzes`),
+        axios.get('/api/assignments')
       ]);
 
       const nextTopic = topicRes.data || null;
       const nextContents = Array.isArray(contentRes.data) ? contentRes.data : [];
       const nextQuizzes = Array.isArray(quizRes.data) ? quizRes.data : [];
+      const allAssignments = Array.isArray(assignmentRes.data) ? assignmentRes.data : [];
+
+      // Filter assignments by topic (assignments have Lesson which has TopicId)
+      const nextAssignments = allAssignments.filter(assignment => 
+        assignment.Lesson && assignment.Lesson.TopicId === parseInt(topicId)
+      );
 
       setTopic(nextTopic);
       setContents(nextContents);
       setQuizzes(nextQuizzes);
+      setAssignments(nextAssignments);
 
       if (user?.role === 'student' && user?.grade && nextTopic?.Subject?.GradeId && Number(nextTopic.Subject.GradeId) !== Number(user.grade)) {
         navigate(`/study/grade/${user.grade}`, { replace: true });
@@ -90,7 +105,7 @@ const TopicContent = () => {
   };
 
   const videos = contents.filter((item) => item.type === 'video');
-  const homework = contents.filter((item) => item.type === 'activity' || item.type === 'reading');
+  const homework = assignments;
 
   if (loading) {
     return (
@@ -116,18 +131,21 @@ const TopicContent = () => {
             </Typography>
           </Box>
         </Box>
-
-        <Tabs
-          value={tab}
-          onChange={(_, value) => setTab(value)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{ mb: 3 }}
-        >
-          <Tab label={`Videos (${videos.length})`} />
-          <Tab label={`Fun Test (${quizzes.length})`} />
-          <Tab label={`Homework (${homework.length})`} />
-        </Tabs>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs 
+            value={tab} 
+            onChange={(e, newVal) => setTab(newVal)} 
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': { fontWeight: 'bold', fontSize: '1rem' }
+            }}
+          >
+            <Tab icon={<PlayCircle fontSize="small" />} iconPosition="start" label={`Videos (${videos.length})`} />
+            <Tab icon={<PsychologyIcon fontSize="small" />} iconPosition="start" label={`Quiz (${quizzes.length})`} />
+            <Tab icon={<Assignment fontSize="small" />} iconPosition="start" label={`Homework (${homework.length})`} />
+          </Tabs>
+        </Box>
 
         {tab === 0 && (
           <Grid container spacing={3}>
@@ -204,21 +222,73 @@ const TopicContent = () => {
             )}
             {quizzes.map((quiz) => (
               <Grid item xs={12} sm={6} md={4} key={quiz.id}>
-                <Card sx={{ borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <Box sx={{ height: 140, bgcolor: 'secondary.light', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Quiz sx={{ fontSize: 56, color: 'white' }} />
+                <Card sx={{ 
+                  borderRadius: 4, 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  transition: 'all 0.3s ease',
+                  '&:hover': { 
+                    transform: 'translateY(-6px)',
+                    boxShadow: '0 12px 24px rgba(124, 77, 255, 0.2)'
+                  }
+                }}>
+                  <Box sx={{ 
+                    height: 120, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #6C5CE7 0%, #A29BFE 100%)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      position: 'absolute',
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.14)',
+                      filter: 'blur(20px)'
+                    }} />
+                    <PsychologyIcon sx={{ fontSize: 60, color: 'white', zIndex: 1, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))' }} />
                   </Box>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="subtitle1" fontWeight={700} noWrap>
+                  <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                      <Chip 
+                        size="small" 
+                        label={quiz.timeLimit ? `${quiz.timeLimit}m` : '10m'} 
+                        icon={<AccessTime style={{ fontSize: 13 }} />}
+                        sx={{ fontWeight: 'bold', bgcolor: 'rgba(108, 92, 231, 0.1)', color: '#6C5CE7' }}
+                      />
+                      <Chip 
+                        size="small" 
+                        label={`${quiz.questionCount || quiz.questions?.length || 0} Qs`} 
+                        sx={{ fontWeight: 'bold', bgcolor: 'rgba(245, 0, 87, 0.1)', color: '#f50057' }}
+                      />
+                    </Box>
+                    <Typography variant="h6" fontWeight={800} sx={{ mt: 1, lineHeight: 1.2 }}>
                       {quiz.title}
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {quiz.timeLimit ? `${quiz.timeLimit} min` : 'Quick quiz'}
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5, fontWeight: 500 }}>
+                      Check your {topic?.name || 'Topic'} skills!
                     </Typography>
                   </CardContent>
-                  <Box sx={{ px: 2, pb: 2 }}>
-                    <Button fullWidth variant="contained" color="secondary" onClick={() => navigate(`/quiz/${quiz.id}/start`)}>
-                      Start Quiz
+                  <Box sx={{ px: 2.5, pb: 2.5 }}>
+                    <Button 
+                      fullWidth 
+                      variant="contained" 
+                      onClick={() => navigate(`/quiz/${quiz.id}/start`)}
+                      sx={{ 
+                        borderRadius: 2.5, 
+                        fontWeight: 'bold', 
+                        py: 1.2,
+                        textTransform: 'none',
+                        bgcolor: '#1a237e',
+                        '&:hover': { bgcolor: '#121858' },
+                        boxShadow: '0 4px 14px 0 rgba(26, 35, 126, 0.35)'
+                      }}
+                    >
+                      Start Assessment
                     </Button>
                   </Box>
                 </Card>
@@ -247,12 +317,17 @@ const TopicContent = () => {
                       {item.title}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
-                      {item.description || 'Practice activity'}
+                      Due: {new Date(item.dueDate).toLocaleDateString()}
                     </Typography>
+                    {item.description && (
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        {item.description}
+                      </Typography>
+                    )}
                   </CardContent>
                   <Box sx={{ px: 2, pb: 2 }}>
-                    <Button fullWidth variant="contained" color="success" onClick={() => navigate(`/study/content/${item.id}`)}>
-                      Open Homework
+                    <Button fullWidth variant="contained" color="success" onClick={() => navigate(`/assignments/view/${item.id}`)}>
+                      View Assignment
                     </Button>
                   </Box>
                 </Card>

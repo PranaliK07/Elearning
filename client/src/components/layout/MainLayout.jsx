@@ -62,6 +62,9 @@ const MainLayout = () => {
     if (source === 'class_communication' && communicationId) {
       handleNotificationsClose();
       navigate(`/communications/${communicationId}`);
+    } else if (notification.type === 'doubt') {
+      handleNotificationsClose();
+      navigate('/doubts');
     }
   };
 

@@ -1,4 +1,4 @@
-const { Quiz, Progress, User, Topic, Lesson } = require('../models');
+const { Quiz, Progress, User, Topic, Lesson, Subject, Grade } = require('../models');
 const { Op } = require('sequelize');
 
 const normalizeQuestions = (questions) => {
@@ -11,14 +11,18 @@ const normalizeQuestions = (questions) => {
   for (let i = 0; i < questions.length; i += 1) {
     const raw = questions[i] || {};
     const questionText = String(raw.question || '').trim();
+    
+    // Process options: trim and filter out empties, but preserve original if possible
     const rawOptions = Array.isArray(raw.options) ? raw.options : [];
-    const options = rawOptions.map((opt) => String(opt || '').trim()).filter(Boolean);
+    const options = rawOptions
+      .map((opt) => String(opt || '').trim())
+      .filter(opt => opt.length > 0);
 
     if (!questionText) {
       return { error: `Question ${i + 1} text is required` };
     }
     if (options.length < 2) {
-      return { error: `Question ${i + 1} must have at least 2 options` };
+      return { error: `Question ${i + 1} needs at least 2 valid options` };
     }
 
     const rawAnswer = raw.correctAnswer;
@@ -26,31 +30,24 @@ const normalizeQuestions = (questions) => {
 
     if (rawAnswer !== undefined && rawAnswer !== null) {
       const answerText = String(rawAnswer).trim();
-
-      // First priority: if it exactly matches an option, use it as option text.
-      // This avoids treating numeric options like "4" as index values.
-      if (answerText && options.includes(answerText)) {
+      
+      // Check if the answer exactly matches any of our processed options
+      if (options.includes(answerText)) {
         correctAnswer = answerText;
-      } else if (/^[A-Za-z]$/.test(answerText)) {
-        const alphaIndex = answerText.toUpperCase().charCodeAt(0) - 65;
-        if (alphaIndex < 0 || alphaIndex >= options.length) {
-          return { error: `Question ${i + 1} has invalid correct answer index` };
+      } else {
+        // If no exact match (e.g. user sent index or something else), 
+        // fallback to logic that checks if it was intended as an index
+        const numeric = parseInt(answerText, 10);
+        if (!isNaN(numeric) && numeric >= 0 && numeric < options.length) {
+            correctAnswer = options[numeric];
+        } else if (!isNaN(numeric) && numeric > 0 && numeric <= options.length) {
+            correctAnswer = options[numeric - 1];
         }
-        correctAnswer = options[alphaIndex];
-      } else if (/^\d+$/.test(answerText)) {
-        const numeric = Number(answerText);
-        const index = numeric > 0 ? numeric - 1 : numeric; // support 1-based and 0-based
-        if (index < 0 || index >= options.length) {
-          return { error: `Question ${i + 1} has invalid correct answer index` };
-        }
-        correctAnswer = options[index];
-      } else if (answerText) {
-        return { error: `Question ${i + 1} correct answer must match one option` };
       }
     }
 
     if (!correctAnswer) {
-      return { error: `Question ${i + 1} correct answer is required` };
+      return { error: `Question ${i + 1} must have a correct answer selected from the options` };
     }
 
     normalized.push({
@@ -103,19 +100,42 @@ const getQuiz = async (req, res) => {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    // Don't send answers to client
     const quizData = quiz.toJSON();
+    
+    // Safety check for questions format
     if (quizData.questions) {
-      quizData.questions = quizData.questions.map(q => ({
-        ...q,
-        correctAnswer: undefined // Remove correct answer
-      }));
+      if (typeof quizData.questions === 'string') {
+        try {
+          quizData.questions = JSON.parse(quizData.questions);
+        } catch (e) {
+          console.error('Failed to parse questions JSON for quiz:', req.params.id);
+          quizData.questions = [];
+        }
+      }
+
+      if (Array.isArray(quizData.questions)) {
+        quizData.questions = quizData.questions.map(q => ({
+          ...q,
+          correctAnswer: undefined // Securely remove correct answer
+        }));
+      } else {
+        quizData.questions = [];
+      }
+    } else {
+      quizData.questions = [];
     }
 
     res.json(quizData);
   } catch (error) {
-    console.error('Get quiz error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Get quiz error details:', {
+      id: req.params.id,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: 'Server error loading quiz details',
+      error: error.message 
+    });
   }
 };
 
@@ -129,7 +149,8 @@ const createQuiz = async (req, res) => {
       passingScore,
       maxAttempts,
       topicId,
-      lessonId
+      lessonId,
+      isPublished
     } = req.body;
 
     const topic = await Topic.findByPk(topicId);
@@ -146,17 +167,17 @@ const createQuiz = async (req, res) => {
       title,
       description,
       questions: normalizedQuestions,
-      timeLimit,
-      passingScore,
-      maxAttempts,
+      timeLimit: timeLimit || 10,
+      passingScore: passingScore || 70,
+      maxAttempts: maxAttempts || 2,
       TopicId: topicId,
       LessonId: lessonId || null,
+      isPublished: isPublished !== undefined ? isPublished : true,
       createdBy: req.user.id
     });
 
     res.status(201).json({
       success: true,
-      message: 'Quiz created successfully',
       quiz
     });
   } catch (error) {
@@ -202,6 +223,7 @@ const updateQuiz = async (req, res) => {
     if (maxAttempts !== undefined) quiz.maxAttempts = maxAttempts;
     if (isPublished !== undefined) quiz.isPublished = isPublished;
     if (lessonId !== undefined) quiz.LessonId = lessonId || null;
+    if (req.body.topicId !== undefined) quiz.TopicId = req.body.topicId || null;
 
     await quiz.save();
 
@@ -259,16 +281,30 @@ const startQuiz = async (req, res) => {
       return res.status(400).json({ message: 'Maximum attempts reached' });
     }
 
+    // Safe questions handling
+    let quizQuestions = quiz.questions;
+    if (typeof quizQuestions === 'string') {
+      try {
+        quizQuestions = JSON.parse(quizQuestions);
+      } catch (e) {
+        quizQuestions = [];
+      }
+    }
+
+    if (!Array.isArray(quizQuestions)) {
+      quizQuestions = [];
+    }
+
     // Create quiz session
     const session = {
       quizId: quiz.id,
       startTime: new Date(),
       timeLimit: quiz.timeLimit,
-      questions: quiz.questions.map(q => ({
-        id: q.id,
+      questions: quizQuestions.map((q, idx) => ({
+        id: q.id || idx,
         question: q.question,
         options: q.options,
-        type: q.type
+        type: q.type || 'multiple'
       }))
     };
 
@@ -286,36 +322,87 @@ const submitQuiz = async (req, res) => {
   try {
     const quizId = req.params.id;
     const userId = req.user.id;
-    const { answers, timeSpent } = req.body;
 
+    // Fetch quiz with limit
     const quiz = await Quiz.findByPk(quizId);
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    // Calculate score
+    // ENFORCE ATTEMPT LIMIT
+    const existingAttempts = await Progress.count({
+      where: {
+        QuizId: quizId,
+        UserId: userId
+      }
+    });
+
+    if (existingAttempts >= quiz.maxAttempts) {
+      return res.status(403).json({ 
+        message: 'Maximum attempts reached',
+        maxAttempts: quiz.maxAttempts,
+        currentAttempts: existingAttempts
+      });
+    }
+
+    const { answers, timeSpent } = req.body;
+
+    // ROBUST QUESTION PARSING (Nuclear Fix for multi-encoded JSON)
+    let quizQuestions = quiz.questions;
+    
+    // Attempt 1: Standard Parse
+    if (typeof quizQuestions === 'string') {
+      try {
+        quizQuestions = JSON.parse(quizQuestions);
+      } catch (e) {
+        console.error('Submit Quiz: Parse 1 failed', e);
+      }
+    }
+    
+    // Attempt 2: Double-encoded check
+    if (typeof quizQuestions === 'string') {
+      try {
+        quizQuestions = JSON.parse(quizQuestions);
+      } catch (e) {
+         console.error('Submit Quiz: Parse 2 failed', e);
+      }
+    }
+
+    // Safety fallback
+    if (!Array.isArray(quizQuestions)) {
+      console.error('Submit Quiz: Questions data is not an array after parsing');
+      return res.status(500).json({ message: 'Quiz data format error. Please re-save this quiz.' });
+    }
+
     let score = 0;
     const results = [];
+    
+    // Only iterate if we have a valid array
+    quizQuestions.forEach((q, index) => {
+      // Validate question object structure
+      if (!q || typeof q !== 'object') return;
 
-    quiz.questions.forEach((q, index) => {
-      const submitted = answers[index] !== undefined && answers[index] !== null
+      const submitted = answers && answers[index] !== undefined && answers[index] !== null
         ? String(answers[index]).trim()
         : '';
+        
       const expected = q.correctAnswer !== undefined && q.correctAnswer !== null
         ? String(q.correctAnswer).trim()
         : '';
+      
       const isCorrect = expected && submitted === expected;
       if (isCorrect) score++;
       
       results.push({
-        question: q.question,
+        question: q.question || `Question ${index + 1}`,
         correct: isCorrect,
         correctAnswer: q.correctAnswer,
-        userAnswer: answers[index] ?? null
+        userAnswer: (answers && answers[index]) ?? null
       });
     });
 
-    const percentage = (score / quiz.questions.length) * 100;
+    const totalQuestions = results.length;
+    const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
     const passed = percentage >= quiz.passingScore;
 
     // Save progress
@@ -341,7 +428,7 @@ const submitQuiz = async (req, res) => {
     res.json({
       success: true,
       score,
-      total: quiz.questions.length,
+      total: totalQuestions,
       percentage,
       passed,
       results,
@@ -411,6 +498,105 @@ const getQuizStats = async (req, res) => {
   }
 };
 
+const getAvailableQuizzes = async (req, res) => {
+  try {
+    const userGradeLevel = req.user?.grade;
+    const userId = req.user?.id ?? 'anonymous';
+    console.log(`🔍 Fetching available quizzes for user ${userId}, grade: ${userGradeLevel}`);
+
+    let gradeFilter = undefined;
+    if (userGradeLevel) {
+      // Allow for string or number comparison
+      gradeFilter = { level: userGradeLevel };
+    }
+
+    const include = [
+      {
+        model: Topic,
+        required: false, // Keep it left join to catch quizzes without a topic if they exist
+        include: [{
+          model: Subject,
+          required: false,
+          include: [{
+            model: Grade,
+            required: false,
+            where: gradeFilter
+          }]
+        }]
+      }
+    ];
+
+    const quizzes = await Quiz.findAll({
+      where: { isPublished: true },
+      include,
+      order: [['createdAt', 'DESC']],
+      limit: 30
+    });
+
+    // If we have a grade filter, we need to filter out quizzes that specifically belong to OTHER grades.
+    // Quizzes with no grade affinity (incomplete path) should remain visible.
+    let filteredQuizzes = quizzes;
+    if (userGradeLevel) {
+      filteredQuizzes = quizzes.filter(quiz => {
+        // If it COMPLETELY resolves to a grade, enforce that it matches the user's grade.
+        const quizGradeLevel = quiz.Topic?.Subject?.Grade?.level;
+        if (quizGradeLevel !== undefined && quizGradeLevel !== null) {
+          return Number(quizGradeLevel) === Number(userGradeLevel);
+        }
+        // If the path is incomplete (no grade found in the Topic->Subject path),
+        // we show it as a "General" or "Topic-Specific" quiz.
+        return true;
+      });
+    }
+
+    // Securely process quizzes before sending to client
+    const processedQuizzes = filteredQuizzes.map(quiz => {
+      const qData = quiz.toJSON();
+      
+      // Safety check and secure questions
+      if (qData.questions) {
+        if (typeof qData.questions === 'string') {
+          try {
+            qData.questions = JSON.parse(qData.questions);
+          } catch (e) {
+            qData.questions = [];
+          }
+        }
+
+        if (Array.isArray(qData.questions)) {
+          // IMPORTANT: Remove correct answers in list view for security
+          const sanitizedQuestions = qData.questions.map(q => ({
+            ...q,
+            correctAnswer: undefined
+          }));
+          qData.questions = sanitizedQuestions;
+          qData.questionCount = sanitizedQuestions.length;
+        } else {
+          qData.questions = [];
+          qData.questionCount = 0;
+        }
+      } else {
+        qData.questions = [];
+        qData.questionCount = 0;
+      }
+      
+      return qData;
+    });
+    
+    res.json(processedQuizzes);
+  } catch (error) {
+    console.error('Get available quizzes error details:', {
+      message: error.message,
+      stack: error.stack,
+      user: { id: req.user?.id, grade: req.user?.grade }
+    });
+    res.status(500).json({ 
+      message: 'Server error loading quizzes',
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   getQuizzes,
   getQuiz,
@@ -421,5 +607,6 @@ module.exports = {
   submitQuiz,
   getQuizResults,
   getQuizLeaderboard,
-  getQuizStats
+  getQuizStats,
+  getAvailableQuizzes
 };

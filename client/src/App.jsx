@@ -21,7 +21,7 @@ import TopicList from './features/study/TopicList';
 import TopicContent from './features/study/TopicContent';
 import VideoView from './features/play/VideoView';
 import PlayHub from './features/play/PlayHub';
-import GamePage from './features/play/GamePage';
+
 import WatchTimeStats from './features/progress/WatchTimeStats';
 import LessonContent from './features/content/lessonContent';
 import QuizStart from './features/quiz/quizStart';
@@ -32,6 +32,7 @@ import ProfileView from './features/profile/ProfileView';
 import EditProfile from './features/profile/EditProfile';
 import InstagramFeed from './features/feed/InstagramFeed';
 import ContentManagement from './features/admin/ContentManagement';
+import UploadedContent from './features/admin/UploadedContent';
 import UserManagement from './features/admin/UserManagement';
 import ContentOverview from './features/admin/ContentOverview';
 import BusinessSettings from './features/admin/BusinessSettings';
@@ -201,7 +202,7 @@ function App() {
                       path="admin/content"
                       element={
                         <ProtectedRoute roles={['admin', 'teacher']}>
-                          <ContentOverview />
+                          <UploadedContent />
                         </ProtectedRoute>
                       }
                     />
@@ -328,7 +329,7 @@ function App() {
                     <Route path="play">
                       <Route index element={<PlayHub />} />
                       <Route path="video/:contentId" element={<VideoView />} />
-                      <Route path="game/:slug" element={<GamePage />} />
+
                     </Route>
 
                     {/* Progress routes */}

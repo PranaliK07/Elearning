@@ -30,8 +30,21 @@ const reportsRoutes = require('./routes/reports');
 const contactRoutes = require('./routes/contact');
 const feedbackRoutes = require('./routes/feedback');
 const attendanceRoutes = require('./routes/attendance');
+const doubtRoutes = require('./routes/doubts');
 
 const app = express();
+
+// Emergency Diagnostics
+const fs = require('fs');
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (res.statusCode >= 500) {
+      const logEntry = `\n--- 500 ERROR ---\nTime: ${new Date().toISOString()}\nPath: ${req.originalUrl}\nMethod: ${req.method}\nIP: ${req.ip}\n`;
+      fs.appendFileSync(path.join(__dirname, 'emergency_log.txt'), logEntry);
+    }
+  });
+  next();
+});
 
 // Security Middleware
 app.use(helmet({
@@ -71,6 +84,10 @@ app.use((req, res, next) => {
 });
 
 // API Routes
+app.get('/api/test-error', (req, res, next) => {
+  next(new Error('Test 500 error logging works!'));
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/grades', gradeRoutes);
@@ -91,6 +108,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/doubts', doubtRoutes);
 
 
 // Use routes
@@ -124,9 +142,17 @@ const PORT = process.env.PORT || 5000;
 sequelize.authenticate()
   .then(() => {
     logger.info('✅ Database connected successfully');
-    return sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
-  })
-  .then(() => {
+    logger.info(`🔍 Database Host: ${process.env.DB_HOST}`);
+    logger.info(`🔍 Database Name: ${process.env.DB_NAME}`);
+    sequelize.sync({ alter: true })
+      .then(() => {
+        logger.info('✅ Database synced successfully (alter: true)');
+      })
+      .catch((err) => {
+        logger.error('❌ Database sync FAILED:', err);
+        // We don't exit here if we can still run, but we must log it
+      });
+    
     app.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📝 Environment: ${process.env.NODE_ENV}`);

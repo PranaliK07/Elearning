@@ -25,6 +25,10 @@ const Topic = sequelize.define('Topic', {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
+  isDeleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   estimatedTime: {
     type: DataTypes.INTEGER,
     defaultValue: 30

@@ -10,7 +10,8 @@ import {
   FormControlLabel,
   FormControl,
   LinearProgress,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import {
   AccessTime,
@@ -30,10 +31,10 @@ const QuizRunner = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [selectedAnswer, setSelectedAnswer] = useState('');
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [initialTimeLimit, setInitialTimeLimit] = useState(0);
   const [flagged, setFlagged] = useState([]);
 
-  const timer = useTimer(timeLeft, () => handleTimeUp());
+  const { timeLeft: timerValue } = useTimer(initialTimeLimit, () => handleTimeUp());
 
   useEffect(() => {
     const fetchQuiz = async () => {
@@ -52,7 +53,7 @@ const QuizRunner = () => {
 
   useEffect(() => {
     if (quiz) {
-      setTimeLeft(quiz.timeLimit * 60);
+      setInitialTimeLimit(quiz.timeLimit * 60);
       setAnswers(new Array(quiz.questions.length).fill(null));
       setFlagged(new Array(quiz.questions.length).fill(false));
     }
@@ -109,40 +110,58 @@ const QuizRunner = () => {
 
   if (loading || !quiz) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <LinearProgress sx={{ width: '50%' }} />
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress />
       </Box>
     );
   }
 
-  const progress = ((currentQuestion + 1) / quiz.questions.length) * 100;
-  const question = quiz.questions[currentQuestion];
+  if (!quiz.questions || quiz.questions.length === 0) {
+    return (
+      <Container maxWidth="md">
+        <Typography variant="h5" color="error" align="center" sx={{ mt: 4 }}>
+          This quiz has no questions. Please contact your teacher.
+        </Typography>
+        <Box sx={{ textAlign: 'center', mt: 2 }}>
+          <Button onClick={() => navigate(-1)} variant="outlined">Go Back</Button>
+        </Box>
+      </Container>
+    );
+  }
+
+  const questionsList = Array.isArray(quiz.questions) ? quiz.questions : [];
+  const progress = questionsList.length > 0 ? ((currentQuestion + 1) / questionsList.length) * 100 : 0;
+  const question = questionsList[currentQuestion];
 
   return (
-    <Container maxWidth="lg">
-      <div>
-        <Paper sx={{ p: 3, borderRadius: 4 }}>
+    <Container maxWidth="md">
+      <Box sx={{ py: 2 }}>
+        <Paper sx={{ p: 2, borderRadius: 4, boxShadow: 3 }}>
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Box>
-              <Typography variant="h5" gutterBottom>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                 {quiz.title}
               </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Question {currentQuestion + 1} of {quiz.questions.length}
+              <Typography variant="caption" color="textSecondary">
+                Question {currentQuestion + 1} / {quiz.questions.length}
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <IconButton onClick={handleFlag} color={flagged[currentQuestion] ? 'warning' : 'default'}>
-                <Flag />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <IconButton size="small" onClick={handleFlag} color={flagged[currentQuestion] ? 'warning' : 'default'}>
+                <Flag fontSize="small" />
               </IconButton>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AccessTime color={timer < 60 ? 'error' : 'action'} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: timerValue < 60 ? 'error.light' : 'action.hover', px: 1.5, py: 0.5, borderRadius: 2 }}>
+                <AccessTime fontSize="small" color={timerValue < 60 ? 'error' : 'action'} />
                 <Typography 
-                  variant="h6" 
-                  color={timer < 60 ? 'error' : 'textPrimary'}
+                  variant="subtitle1" 
+                  sx={{ 
+                    fontWeight: 'bold',
+                    color: timerValue < 60 ? 'error.main' : 'text.primary',
+                    minWidth: '50px'
+                  }}
                 >
-                  {formatTime(timer)}
+                  {formatTime(timerValue)}
                 </Typography>
               </Box>
             </Box>
@@ -152,41 +171,44 @@ const QuizRunner = () => {
           <LinearProgress 
             variant="determinate" 
             value={progress} 
-            sx={{ height: 8, borderRadius: 4, mb: 3 }}
+            sx={{ height: 6, borderRadius: 3, mb: 2 }}
           />
 
           {/* Question */}
           <div key={currentQuestion}>
-              <Paper sx={{ p: 4, bgcolor: 'background.default', borderRadius: 3, mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
+              <Paper sx={{ p: 2.5, bgcolor: 'background.default', borderRadius: 3, mb: 2, border: '1px solid #eee' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                   {question.question}
                 </Typography>
 
                 {question.image && (
-                  <Box sx={{ my: 2, textAlign: 'center' }}>
+                  <Box sx={{ mb: 2, textAlign: 'center' }}>
                     <img 
                       src={question.image} 
                       alt="Question" 
-                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8 }}
+                      style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 8 }}
                     />
                   </Box>
                 )}
 
-                <FormControl component="fieldset" sx={{ width: '100%', mt: 2 }}>
+                <FormControl component="fieldset" sx={{ width: '100%' }}>
                   <RadioGroup value={selectedAnswer} onChange={handleAnswerChange}>
                     {question.options.map((option, index) => (
                       <FormControlLabel
                         key={index}
                         value={option}
-                        control={<Radio />}
+                        control={<Radio size="small" />}
                         label={option}
                         sx={{
-                          p: 1,
+                          p: 0.5,
+                          px: 1.5,
                           mb: 1,
+                          mr: 0,
                           borderRadius: 2,
                           border: '1px solid',
                           borderColor: 'divider',
                           width: '100%',
+                          '& .MuiFormControlLabel-label': { fontSize: '0.9rem' },
                           '&:hover': {
                             bgcolor: 'action.hover'
                           }
@@ -199,38 +221,44 @@ const QuizRunner = () => {
             </div>
 
           {/* Navigation */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Button
               startIcon={<ArrowBack />}
               onClick={handlePrevious}
               disabled={currentQuestion === 0}
               variant="outlined"
+              size="small"
             >
-              Previous
+              Back
             </Button>
             
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
               <Button
                 variant="outlined"
                 color="warning"
+                size="small"
                 onClick={() => {/* Show question palette */}}
               >
-                Question {currentQuestion + 1}
+                Q {currentQuestion + 1}
               </Button>
               
               {currentQuestion === quiz.questions.length - 1 ? (
                 <Button
                   variant="contained"
                   color="success"
+                  size="small"
                   onClick={submitQuiz}
+                  sx={{ px: 3 }}
                 >
-                  Submit Quiz
+                  Submit
                 </Button>
               ) : (
                 <Button
                   endIcon={<ArrowForward />}
                   onClick={handleNext}
                   variant="contained"
+                  size="small"
+                  sx={{ px: 3 }}
                 >
                   Next
                 </Button>
@@ -238,7 +266,7 @@ const QuizRunner = () => {
             </Box>
           </Box>
         </Paper>
-      </div>
+      </Box>
     </Container>
   );
 };

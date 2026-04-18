@@ -101,9 +101,14 @@ const deleteNotification = async (req, res) => {
 
 const getUnreadCount = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not identified' });
+    }
+
     const count = await Notification.count({
       where: {
-        userId: req.user.id,
+        userId: userId,
         isRead: false,
         isDeleted: false
       }
@@ -111,8 +116,15 @@ const getUnreadCount = async (req, res) => {
 
     res.json({ count });
   } catch (error) {
-    console.error('Get unread count error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Get unread count error details:', {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: 'Server error loading unread count',
+      error: error.message 
+    });
   }
 };
 

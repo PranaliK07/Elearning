@@ -43,10 +43,19 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Default error
-  res.status(err.status || 500).json({
+  const statusCode = err.status || 500;
+  const message = err.message || 'Internal server error';
+
+  logger.error(`[ErrorHandler] ${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+  if (err.stack) logger.error(err.stack);
+
+  res.status(statusCode).json({
     status: 'error',
-    message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: message,
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: err.stack,
+      details: err.errors || err.original || err
+    })
   });
 };
 

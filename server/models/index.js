@@ -20,6 +20,7 @@ const ClassCommunication = require('./ClassCommunication');
 const sequelize = require('../config/database');
 const Feedback = require('./Feedback');
 const Attendance = require('./Attendance');
+const Doubt = require('./Doubt');
 
 // Grade Associations
 Grade.hasMany(Subject, { onDelete: 'CASCADE' });
@@ -141,6 +142,14 @@ Attendance.belongsTo(Grade, { foreignKey: 'gradeId' });
 Grade.hasMany(Attendance, { foreignKey: 'gradeId', onDelete: 'CASCADE' });
 User.hasMany(Attendance, { as: 'attendance', foreignKey: 'studentId', onDelete: 'CASCADE' });
 
+// Doubt Associations
+Doubt.belongsTo(User, { as: 'student', foreignKey: 'studentId' });
+Doubt.belongsTo(User, { as: 'teacher', foreignKey: 'teacherId' });
+Doubt.belongsTo(Subject, { foreignKey: 'subjectId' });
+User.hasMany(Doubt, { as: 'submittedDoubts', foreignKey: 'studentId' });
+User.hasMany(Doubt, { as: 'receivedDoubts', foreignKey: 'teacherId' });
+Subject.hasMany(Doubt, { foreignKey: 'subjectId' });
+
 module.exports = {
   sequelize,
   User,
@@ -163,5 +172,6 @@ module.exports = {
   RoleAccess,
   ClassCommunication,
   Feedback,
-  Attendance
+  Attendance,
+  Doubt
 };

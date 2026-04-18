@@ -15,22 +15,26 @@ const Quiz = sequelize.define('Quiz', {
     type: DataTypes.TEXT
   },
   questions: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: false,
-    validate: {
-      isValidQuestions(value) {
-        if (!Array.isArray(value) || value.length === 0) {
-          throw new Error('Questions must be a non-empty array');
+    get() {
+      const rawValue = this.getDataValue('questions');
+      if (!rawValue) return [];
+      try {
+        // Handle potential double-encoding safely
+        let data = rawValue;
+        while (typeof data === 'string') {
+          const parsed = JSON.parse(data);
+          if (parsed === data) break;
+          data = parsed;
         }
-        value.forEach((q, index) => {
-          if (!q.question || !q.options || !q.correctAnswer) {
-            throw new Error(`Question ${index + 1} is missing required fields`);
-          }
-          if (!Array.isArray(q.options) || q.options.length < 2) {
-            throw new Error(`Question ${index + 1} must have at least 2 options`);
-          }
-        });
+        return data;
+      } catch (e) {
+        return [];
       }
+    },
+    set(value) {
+      this.setDataValue('questions', typeof value === 'string' ? value : JSON.stringify(value));
     }
   },
   timeLimit: {
@@ -48,7 +52,7 @@ const Quiz = sequelize.define('Quiz', {
   },
   maxAttempts: {
     type: DataTypes.INTEGER,
-    defaultValue: 3
+    defaultValue: 2
   },
   attempts: {
     type: DataTypes.INTEGER,
@@ -59,6 +63,10 @@ const Quiz = sequelize.define('Quiz', {
     defaultValue: 0
   },
   isPublished: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  isDeleted: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },

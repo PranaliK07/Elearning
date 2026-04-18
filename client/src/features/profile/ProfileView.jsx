@@ -42,6 +42,7 @@ const ProfileView = () => {
 
   const [quickStats, setQuickStats] = useState(null);
   const [teacherStats, setTeacherStats] = useState(null);
+  const [dailyStars, setDailyStars] = useState(0);
   const [recentActivity, setRecentActivity] = useState([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingRecent, setLoadingRecent] = useState(false);
@@ -90,9 +91,24 @@ const ProfileView = () => {
       }
     };
 
+    const fetchDailyStars = async () => {
+      if (user?.role !== 'student') return;
+      try {
+        const response = await axios.get('/api/achievements/daily-goal', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.success) {
+          setDailyStars(response.data.starsEarned || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching daily stars:', error);
+      }
+    };
+
     fetchQuickStats();
     fetchTeacherStats();
     fetchRecentActivity();
+    fetchDailyStars();
   }, [token, user?.role]);
 
   const stats = useMemo(() => {
@@ -110,7 +126,7 @@ const ProfileView = () => {
 
     return [
       { label: 'Total Watch Time', value: `${watchTimeHours}h`, icon: <AccessTime /> },
-      { label: 'Points Earned', value: quickStats?.points ?? user?.points ?? 0, icon: <Star /> },
+      { label: 'Daily Stars', value: dailyStars, icon: <Star sx={{ color: '#FFD93D' }} />, hollow: true },
       { label: 'Achievements', value: quickStats?.achievements ?? (user?.Achievements?.length ?? user?.achievements?.length ?? 0), icon: <EmojiEvents /> },
       { label: 'Completed Lessons', value: quickStats?.completedLessons ?? 0, icon: <TrendingUp /> }
     ];
@@ -207,14 +223,25 @@ const ProfileView = () => {
                     Current Class
                   </Typography>
                 </Box>
-                <Box>
-                  <Typography variant="h5" color="primary">
-                    {user?.points || 0}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Total Points
-                  </Typography>
-                </Box>
+                {user?.role === 'student' ? (
+                  <Box>
+                    <Typography variant="h5" color="primary">
+                      {'⭐'.repeat(dailyStars) || '⭐'}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Daily Stars
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Typography variant="h5" color="primary">
+                      {user?.points || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Total Points
+                    </Typography>
+                  </Box>
+                )}
                 <Box>
                   <Typography variant="h5" color="primary">
                     {Math.round((watchTimeStats?.totalWatchTime || 0) / 60)}h
@@ -241,7 +268,7 @@ const ProfileView = () => {
                 transition={{ delay: index * 0.1 }}
               >
                 <Paper sx={{ p: 3, textAlign: 'center', borderRadius: 3 }}>
-                  <Avatar sx={{ bgcolor: 'primary.light', mx: 'auto', mb: 2 }}>
+                  <Avatar sx={{ bgcolor: stat.hollow ? 'transparent' : 'primary.light', mx: 'auto', mb: 2 }}>
                     {stat.icon}
                   </Avatar>
                   <Typography variant="h4" gutterBottom>
@@ -256,100 +283,7 @@ const ProfileView = () => {
           ))}
         </Grid>
 
-        {/* Recent Activity & Achievements */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 4 }}>
-              <Typography variant="h5" gutterBottom>
-                Recent Activity
-              </Typography>
 
-              {loadingRecent ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress size={28} />
-                </Box>
-              ) : recentActivity.length === 0 ? (
-                <Typography variant="body2" color="textSecondary">
-                  No recent activity yet.
-                </Typography>
-              ) : (
-                <List>
-                  {recentActivity.map((item, index) => {
-                    const title = item?.Content?.title || 'Activity';
-                    const updatedAt = item?.updatedAt ? new Date(item.updatedAt).toLocaleString() : '';
-                    const status = item?.completed ? 'Completed' : 'In progress';
-                    return (
-                      <React.Fragment key={item?.id || index}>
-                        <ListItem>
-                          <ListItemIcon>
-                            <TrendingUp color="primary" />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={title}
-                            secondary={
-                              <Typography variant="caption" color="textSecondary">
-                                {status}{updatedAt ? ` • ${updatedAt}` : ''}
-                              </Typography>
-                            }
-                          />
-                        </ListItem>
-                        {index < recentActivity.length - 1 && <Divider />}
-                      </React.Fragment>
-                    );
-                  })}
-                </List>
-              )}
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 4 }}>
-              <Typography variant="h5" gutterBottom>
-                Achievements
-              </Typography>
-
-              {achievements.length === 0 ? (
-                <Typography variant="body2" color="textSecondary">
-                  No achievements unlocked yet.
-                </Typography>
-              ) : (
-                <List>
-                  {achievements.slice(0, 10).map((achievement, index) => (
-                    <React.Fragment key={achievement?.id || index}>
-                      <ListItem>
-                        <ListItemIcon>
-                          <EmojiEvents color="secondary" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={achievement?.name || 'Achievement'}
-                          secondary={
-                            achievement?.description ? (
-                              <Typography variant="caption" color="textSecondary">
-                                {achievement.description}
-                              </Typography>
-                            ) : null
-                          }
-                        />
-                      </ListItem>
-                      {index < Math.min(achievements.length, 10) - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
-
-              {user?.role === 'student' && (
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={() => navigate('/progress')}
-                  sx={{ mt: 2 }}
-                >
-                  View Detailed Progress
-                </Button>
-              )}
-            </Paper>
-          </Grid>
-        </Grid>
       </motion.div>
     </Container>
   );
