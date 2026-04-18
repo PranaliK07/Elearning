@@ -39,10 +39,10 @@ const NotFound = () => {
         <Button
           variant="contained"
           size="large"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/dashboard')}
           sx={{ borderRadius: 4, px: 4 }}
         >
-          Back to Home
+          Back to Dashboard
         </Button>
       </Box>
     </Container>

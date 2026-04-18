@@ -44,7 +44,7 @@ import {
   Replay10,
   Forward10,
   Book,
-  Quiz,
+  Psychology as Quiz,
   AutoGraph,
   LocalFireDepartment,
   CheckCircle,
@@ -57,7 +57,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useProgress } from '../../context/ProgressContext';
-import axios from 'axios';
+import axios from '../../utils/axios';
 import ReelPlayer from '../../components/common/ReelPlayer';
 
 const Transition = React.forwardRef(function Transition(props, ref) {
@@ -73,6 +73,7 @@ const StudentDashboard = () => {
   
   // State
   const [achievements, setAchievements] = useState([]);
+  const [dailyGoal, setDailyGoal] = useState({ goals: [], starsEarned: 0 });
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -130,6 +131,7 @@ const StudentDashboard = () => {
   // Fetch data on mount
   useEffect(() => {
     fetchDashboardData();
+    fetchDailyGoal();
     
     // Load video progress from localStorage
     const savedProgress = localStorage.getItem('videoProgress');
@@ -137,6 +139,17 @@ const StudentDashboard = () => {
       setVideoProgress(JSON.parse(savedProgress));
     }
   }, []);
+
+  const fetchDailyGoal = async () => {
+    try {
+      const res = await axios.get('/api/achievements/daily-goal');
+      if (res.data.success) {
+        setDailyGoal(res.data);
+      }
+    } catch (err) {
+      console.error('Fetch daily goal error', err);
+    }
+  };
 
   // Handle video playback when index changes
   useEffect(() => {
@@ -656,7 +669,7 @@ const StudentDashboard = () => {
       const [achievementsRes, videosRes, quizzesRes] = await Promise.allSettled([
         axios.get('/api/achievements/user', { headers }),
         axios.get('/api/content?type=video&limit=20&sort=createdAt&order=desc', { headers }),
-        axios.get('/api/quizzes/available', { headers })
+        axios.get('/api/quiz/available', { headers })
       ]);
 
       if (achievementsRes.status === 'fulfilled') {
@@ -1288,8 +1301,7 @@ const StudentDashboard = () => {
       />
 
       {/* Progress + Achievements Card */}
-      {(achievements.length > 0 || progressItems.length > 0) && (
-        <Paper sx={{
+      <Paper sx={{
           position: 'fixed',
           bottom: { xs: '70px', sm: '80px' },
           left: { xs: 8, sm: 12 },
@@ -1334,6 +1346,108 @@ const StudentDashboard = () => {
                 </Typography>
               </Box>
             ))}
+          </Box>
+
+          {/* Daily Missions */}
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+              <Typography variant="subtitle2" sx={{ 
+                color: 'white', 
+                display: 'flex', 
+                alignItems: 'center', 
+                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                fontWeight: 800,
+                letterSpacing: 1.5,
+                textShadow: '0 0 10px rgba(255, 217, 61, 0.4)'
+              }}>
+                <Star sx={{ fontSize: { xs: 16, sm: 18 }, mr: 0.5, color: '#FFD93D' }} />
+                DAILY MISSIONS
+              </Typography>
+              <Chip 
+                label={`${dailyGoal.starsEarned}/5 STARS`} 
+                size="small"
+                sx={{ 
+                  bgcolor: dailyGoal.starsEarned === 5 ? '#FFD93D' : 'rgba(255,255,255,0.1)',
+                  color: dailyGoal.starsEarned === 5 ? '#000' : '#FFD93D',
+                  fontWeight: 900,
+                  fontSize: '0.65rem'
+                }}
+              />
+            </Box>
+            
+            {dailyGoal.starsEarned === 5 && (
+              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                <Box sx={{ 
+                  mb: 1.5, 
+                  p: 1.5, 
+                  borderRadius: 3, 
+                  background: 'linear-gradient(135deg, #FFD93D 0%, #FF8400 100%)',
+                  textAlign: 'center',
+                  boxShadow: '0 4px 15px rgba(255, 217, 61, 0.4)'
+                }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'black' }}>
+                    🌟 YOU ARE A SUPERSTAR! 🌟
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'rgba(0,0,0,0.7)' }}>
+                    All 5 daily goals completed!
+                  </Typography>
+                </Box>
+              </motion.div>
+            )}
+
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              bgcolor: 'rgba(255,255,255,0.06)', 
+              borderRadius: 4, 
+              p: 1.5,
+              border: '1px solid rgba(255,255,255,0.1)',
+              gap: 0.5
+            }}>
+              {(dailyGoal.goals || []).map((goal) => (
+                <Box key={goal.id} sx={{ textAlign: 'center', flex: 1 }}>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    animate={goal.completed ? { 
+                      scale: [1, 1.15, 1],
+                      boxShadow: ['0 0 0px #FFD93D', '0 0 20px #FFD93D', '0 0 10px #FFD93D']
+                    } : {}}
+                    transition={{ repeat: Infinity, duration: 2.5 }}
+                  >
+                    <Box sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: goal.completed ? alpha('#FFD93D', 0.25) : 'rgba(255,255,255,0.08)',
+                      mb: 0.5,
+                      mx: 'auto',
+                      border: goal.completed ? '2px solid #FFD93D' : '1px dashed rgba(255,255,255,0.3)',
+                      transition: 'all 0.4s ease'
+                    }}>
+                      {goal.completed ? (
+                        <Star sx={{ color: '#FFD93D', fontSize: 20 }} />
+                      ) : (
+                        <Typography sx={{ fontSize: 18, opacity: 0.6 }}>{goal.icon}</Typography>
+                      )}
+                    </Box>
+                  </motion.div>
+                  <Typography variant="caption" sx={{ 
+                    color: goal.completed ? '#FFD93D' : 'rgba(255,255,255,0.5)', 
+                    fontSize: '0.45rem', 
+                    fontWeight: 800,
+                    letterSpacing: 0,
+                    display: 'block',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden'
+                  }}>
+                    {goal.id.toUpperCase()}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
           </Box>
 
           {/* Achievements */}
@@ -1386,7 +1500,6 @@ const StudentDashboard = () => {
             </>
           )}
         </Paper>
-      )}
 
       {/* Quick Action Buttons */}
       <Box sx={{

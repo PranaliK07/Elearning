@@ -142,7 +142,32 @@ const getTopicQuizzes = async (req, res) => {
       return res.status(404).json({ message: 'Topic not found' });
     }
 
-    res.json(topic.Quizzes);
+    const quizzes = topic.Quizzes.map(quiz => {
+      const qData = quiz.toJSON();
+      if (qData.questions) {
+        if (typeof qData.questions === 'string') {
+          try {
+            qData.questions = JSON.parse(qData.questions);
+          } catch (e) {
+            qData.questions = [];
+          }
+        }
+        
+        if (Array.isArray(qData.questions)) {
+          qData.questions = qData.questions.map(q => ({
+            ...q,
+            correctAnswer: undefined
+          }));
+        } else {
+          qData.questions = [];
+        }
+      } else {
+        qData.questions = [];
+      }
+      return qData;
+    });
+
+    res.json(quizzes);
   } catch (error) {
     console.error('Get topic quizzes error:', error);
     res.status(500).json({ message: 'Server error' });

@@ -29,7 +29,25 @@ const QuizResult = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [quizInfo, setQuizInfo] = React.useState(null);
+  const [attemptsCount, setAttemptsCount] = React.useState(0);
   const { result } = location.state || { result: { score: 0, total: 0, passed: false, answers: [], results: [] } };
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [qRes, rRes] = await Promise.all([
+          axios.get(`/api/quiz/${quizId}`),
+          axios.get(`/api/quiz/${quizId}/results`)
+        ]);
+        setQuizInfo(qRes.data);
+        setAttemptsCount(rRes.data?.length || 0);
+      } catch (error) {
+        console.error('Error fetching quiz stats:', error);
+      }
+    };
+    fetchStats();
+  }, [quizId]);
 
   const safeTotal = result.total || 0;
   const percentage = safeTotal ? Math.round((result.score / safeTotal) * 100) : 0;
@@ -42,6 +60,8 @@ const QuizResult = () => {
           selected: item.userAnswer
         }))
       : []);
+
+  const hasRetryAvailable = quizInfo && attemptsCount < quizInfo.maxAttempts;
 
   const handleRetry = () => {
     navigate(`/quiz/${quizId}/run`);
@@ -60,164 +80,121 @@ const QuizResult = () => {
       {passed && <Confetti recycle={false} numberOfPieces={200} />}
       
       <Container maxWidth="md">
-        <div>
-          <Paper sx={{ p: 4, borderRadius: 4, textAlign: 'center' }}>
-            {/* Result Icon */}
-            <div>
-              {passed ? (
-                <EmojiEvents sx={{ fontSize: 100, color: 'warning.main' }} />
-              ) : (
-                <Cancel sx={{ fontSize: 100, color: 'error.main' }} />
-              )}
-            </div>
+        <Box sx={{ py: 2 }}>
+          <Paper 
+            elevation={4}
+            sx={{ 
+              p: 3, 
+              borderRadius: 4, 
+              background: 'linear-gradient(135deg, #ffffff 0%, #fefefe 100%)',
+              textAlign: 'center',
+              boxShadow: '0 15px 35px rgba(0,0,0,0.08)'
+            }}
+          >
+            {/* Header: Wide but Short */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, mb: 2 }}>
+              <Box>
+                {passed ? (
+                  <EmojiEvents sx={{ fontSize: 60, color: 'warning.main' }} />
+                ) : (
+                  <Cancel sx={{ fontSize: 60, color: 'error.main' }} />
+                )}
+              </Box>
+              <Box sx={{ textAlign: 'left' }}>
+                <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1 }}>
+                  {passed ? 'Congratulations! 🎉' : 'Keep Pushing! 📚'}
+                </Typography>
+                <Typography variant="body1" color="textSecondary">
+                  {passed ? 'You successfully passed the quiz!' : 'Try again to master this topic!'}
+                </Typography>
+              </Box>
+            </Box>
 
-            <Typography variant="h3" gutterBottom sx={{ mt: 2 }}>
-              {passed ? 'Congratulations! 🎉' : 'Better Luck Next Time! 📚'}
-            </Typography>
-
-            <Typography variant="h6" color="textSecondary" paragraph>
-              {passed 
-                ? 'You have successfully passed the quiz!' 
-                : 'Don\'t worry, you can try again!'}
-            </Typography>
-
-            {/* Score Card */}
-            <Paper
-              sx={{
-                p: 3,
-                bgcolor: passed ? 'success.light' : 'error.light',
-                color: 'white',
-                borderRadius: 3,
-                my: 3
-              }}
-            >
-              <Typography variant="h2" sx={{ fontWeight: 'bold' }}>
-                {percentage}%
-              </Typography>
-              <Typography variant="h5">
-                {result.score} / {result.total} Correct
-              </Typography>
-            </Paper>
-
-            {/* Stats */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={4}>
-                <Box>
-                  <Typography variant="h4" color="success.main">
-                    {result.score}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Correct
-                  </Typography>
-                </Box>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              {/* Score Card - Now Wider and Shorter */}
+              <Grid item xs={12} md={7}>
+                <Paper
+                  sx={{
+                    p: 2,
+                    bgcolor: passed ? 'success.main' : 'error.main',
+                    color: 'white',
+                    borderRadius: 3,
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-around',
+                    boxShadow: '0 8px 16px -4px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 900 }}>{percentage}%</Typography>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>Final Score</Typography>
+                  </Box>
+                  <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)' }} />
+                  <Box>
+                    <Typography variant="h4" sx={{ fontWeight: 800 }}>{result.score} / {result.total}</Typography>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>Correct Answers</Typography>
+                  </Box>
+                </Paper>
               </Grid>
-              <Grid item xs={4}>
-                <Box>
-                  <Typography variant="h4" color="error.main">
-                    {result.total - result.score}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Incorrect
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={4}>
-                <Box>
-                  <Typography variant="h4" color="primary.main">
-                    {result.total}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Total
-                  </Typography>
-                </Box>
+
+              {/* Achievements - Side by Side with Score */}
+              <Grid item xs={12} md={5}>
+                <Paper sx={{ p: 2, borderRadius: 3, bgcolor: '#fbfbfb', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px dashed #ddd' }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 'bold', mb: 1, display: 'block' }}>REWARDS EARNED</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    <Chip icon={<EmojiEvents sx={{ fontSize: 18 }} />} label="Quiz Master" color="warning" variant="outlined" sx={{ fontWeight: 600 }} />
+                    <Chip icon={<CheckCircle sx={{ fontSize: 18 }} />} label="Sharp Mind" color="success" variant="outlined" sx={{ fontWeight: 600 }} />
+                  </Box>
+                </Paper>
               </Grid>
             </Grid>
 
-            {/* Earned Badges */}
-            {passed && (
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Badges Earned
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-                  <Chip
-                    icon={<EmojiEvents />}
-                    label="Quiz Master"
-                    color="warning"
-                    sx={{ fontSize: '1rem', py: 2 }}
-                  />
-                  <Chip
-                    icon={<CheckCircle />}
-                    label="Sharp Mind"
-                    color="success"
-                    sx={{ fontSize: '1rem', py: 2 }}
-                  />
-                </Box>
-              </Box>
-            )}
+            <Divider sx={{ mb: 2 }} />
 
-            <Divider sx={{ my: 3 }} />
-
-            {/* Answer Review */}
-            <Box sx={{ textAlign: 'left', mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Question Review
+            {/* Answer Review - Extra Wide Table View */}
+            <Box sx={{ textAlign: 'left', mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: 'text.secondary', ml: 1 }}>
+                QUESTION REVIEW
               </Typography>
-              <List>
-                {reviewedAnswers.map((answer, index) => (
-                  <ListItem key={index} sx={{ px: 0 }}>
-                    <ListItemIcon>
-                      {answer.correct ? (
-                        <CheckCircle color="success" />
-                      ) : (
-                        <Cancel color="error" />
-                      )}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`Question ${index + 1}`}
-                      secondary={`Your answer: ${answer.selected || 'Not answered'}`}
-                    />
-                    <Chip
-                      label={answer.correct ? 'Correct' : 'Incorrect'}
-                      color={answer.correct ? 'success' : 'error'}
-                      size="small"
-                    />
-                  </ListItem>
-                ))}
-              </List>
+              <Box sx={{ 
+                maxHeight: 160, 
+                overflowY: 'auto', 
+                pr: 1,
+                '&::-webkit-scrollbar': { width: '5px' },
+                '&::-webkit-scrollbar-thumb': { bgcolor: '#eee', borderRadius: '10px' }
+              }}>
+                <Grid container spacing={1}>
+                  {reviewedAnswers.map((answer, index) => (
+                    <Grid item xs={12} sm={6} key={index}>
+                      <ListItem sx={{ py: 1, px: 2, bgcolor: '#f9f9f9', borderRadius: 2, border: '1px solid #eee' }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          {answer.correct ? <CheckCircle color="success" fontSize="small" /> : <Cancel color="error" fontSize="small" />}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={`Question ${index + 1}: ${answer.selected || 'None'}`}
+                          primaryTypographyProps={{ variant: 'body2', fontWeight: 600, sx: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                        />
+                      </ListItem>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
             </Box>
 
-            {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {!passed && (
-                <Button
-                  variant="contained"
-                  startIcon={<Refresh />}
-                  onClick={handleRetry}
-                  size="large"
-                >
-                  Try Again
+            {/* Actions - Single Compact Row */}
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+              {!passed && hasRetryAvailable && (
+                <Button variant="contained" onClick={handleRetry} size="medium" startIcon={<Refresh />} sx={{ px: 4, borderRadius: 2 }}>
+                  Retry Quiz
                 </Button>
               )}
-              <Button
-                variant={passed ? 'contained' : 'outlined'}
-                startIcon={<Home />}
-                onClick={handleHome}
-                size="large"
-              >
-                Go to Dashboard
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<Share />}
-                onClick={handleShare}
-                size="large"
-              >
-                Share Result
+              <Button variant={passed ? 'contained' : 'outlined'} onClick={handleHome} size="medium" startIcon={<Home />} sx={{ px: 4, borderRadius: 2, bgcolor: passed ? '#0B1F3B' : 'transparent' }}>
+                Dashboard
               </Button>
             </Box>
           </Paper>
-        </div>
+        </Box>
       </Container>
     </>
   );

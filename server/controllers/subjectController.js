@@ -1,4 +1,4 @@
-const { Subject, Grade, Topic, Content, Quiz } = require('../models');
+const { Subject, Grade, Topic, Content, Quiz, Lesson } = require('../models');
 
 const getSubjects = async (req, res) => {
   try {
@@ -9,14 +9,100 @@ const getSubjects = async (req, res) => {
 
     const subjects = await Subject.findAll({
       where,
-      include: [Grade, Topic],
+      include: [
+        { model: Grade },
+        {
+          model: Topic,
+          include: [
+            { 
+              model: Content, 
+              where: { isPublished: true },
+              required: false
+            },
+            { 
+              model: Quiz, 
+              where: { isPublished: true },
+              required: false
+            },
+            {
+              model: Lesson,
+              include: [
+                { 
+                  model: Content, 
+                  where: { isPublished: true },
+                  required: false
+                },
+                { 
+                  model: Quiz, 
+                  where: { isPublished: true },
+                  required: false
+                }
+              ]
+            }
+          ]
+        },
+        { 
+          model: Content, 
+          where: { isPublished: true },
+          required: false
+        }
+      ],
       order: [['order', 'ASC']]
     });
 
-    res.json(subjects);
+    // Transform to include counts
+    const processedSubjects = subjects.map(subject => {
+      const s = subject.toJSON();
+      let videoCount = 0;
+      let quizCount = 0;
+      let topicCount = s.Topics?.length || 0;
+
+      const processContent = (items) => {
+        if (!items || !Array.isArray(items)) return;
+        items.forEach(c => {
+          if (c.type === 'video') videoCount++;
+          if (c.type === 'quiz') quizCount++;
+        });
+      };
+
+      const processQuizzes = (items) => {
+        if (!items || !Array.isArray(items)) return;
+        quizCount += items.length;
+      };
+
+      // 1. Direct Subject Items
+      processContent(s.Contents || s.contents);
+
+      // 2. Items from Topics and Lessons
+      if (s.Topics) {
+        s.Topics.forEach(topic => {
+          // Topic Level
+          processContent(topic.Contents || topic.contents);
+          processQuizzes(topic.Quizzes || topic.quizzes);
+
+          // Lesson Level
+          const lessons = topic.Lessons || topic.lessons;
+          if (lessons && Array.isArray(lessons)) {
+            lessons.forEach(lesson => {
+              processContent(lesson.Contents || lesson.contents);
+              processQuizzes(lesson.Quizzes || lesson.quizzes);
+            });
+          }
+        });
+      }
+
+      return {
+        ...s,
+        topicCount,
+        videoCount,
+        quizCount
+      };
+    });
+
+    res.json(processedSubjects);
   } catch (error) {
     console.error('Get subjects error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', details: error.message, stack: error.stack });
   }
 };
 
@@ -126,7 +212,35 @@ const getSubjectTopics = async (req, res) => {
       return res.status(404).json({ message: 'Subject not found' });
     }
 
-    res.json(subject.Topics);
+    const subjectData = subject.toJSON();
+    if (subjectData.Topics) {
+      subjectData.Topics.forEach(topic => {
+        if (topic.Quizzes) {
+          topic.Quizzes = topic.Quizzes.map(quiz => {
+            if (quiz.questions) {
+              if (typeof quiz.questions === 'string') {
+                try {
+                  quiz.questions = JSON.parse(quiz.questions);
+                } catch (e) {
+                  quiz.questions = [];
+                }
+              }
+
+              if (Array.isArray(quiz.questions)) {
+                // Securely remove correct answers
+                quiz.questions = quiz.questions.map(q => ({
+                  ...q,
+                  correctAnswer: undefined
+                }));
+              }
+            }
+            return quiz;
+          });
+        }
+      });
+    }
+
+    res.json(subjectData.Topics);
   } catch (error) {
     console.error('Get subject topics error:', error);
     res.status(500).json({ message: 'Server error' });

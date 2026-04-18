@@ -11,7 +11,7 @@ import {
   Divider,
   Avatar,
   Typography,
-  Chip
+  Chip,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -36,6 +36,7 @@ import {
   AccountTree as TopicManagerIcon,
   RateReview as FeedbackIcon,
   Description,
+  Quiz as QuizIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/axios';
@@ -67,13 +68,14 @@ const configuredModules = new Set([
   'doubts',
   'play',
   'feedback',
-  'attendance'
+  'attendance',
+  'quizzes'
 ]);
 
 const defaultRoleAccess = {
   admin: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'users', 'content', 'reports', 'reports-issues', 'settings', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'communications', 'business-settings', 'doubts', 'feedback']),
-  teacher: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'reports', 'communications', 'feedback']),
-  student: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'doubts', 'feedback', 'attendance'])
+  teacher: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'new-lesson', 'subject-topic', 'assignments', 'attendance', 'class-management', 'reports', 'communications', 'feedback', 'content', 'doubts']),
+  student: new Set(['dashboard', 'subjects', 'play', 'progress', 'achievements', 'profile', 'doubts', 'feedback', 'attendance', 'quizzes'])
 };
 
 const loadRoleAccess = () => {
@@ -112,7 +114,6 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
           window.dispatchEvent(new Event('roleAccessUpdated'));
         }
       } catch (err) {
-        // Silently ignore if user isn't allowed; defaults/local cache will be used
         if (import.meta?.env?.DEV) {
           console.warn('Role access fetch skipped', err?.response?.status);
         }
@@ -124,7 +125,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
   const role = user?.role || 'student';
   const roleAccess = loadRoleAccess(accessVersion);
   const baseAllowed = roleAccess[role] || defaultRoleAccess[role] || defaultRoleAccess.student;
-  const studentBaseline = new Set(['dashboard', 'subjects', 'progress', 'achievements', 'profile', 'doubts', 'assignments', 'attendance']);
+  const studentBaseline = new Set(['dashboard', 'subjects', 'progress', 'achievements', 'profile', 'doubts', 'assignments', 'attendance', 'quizzes']);
   const allowed = role === 'student'
     ? new Set([...baseAllowed, ...studentBaseline])
     : baseAllowed;
@@ -137,18 +138,23 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
   const items = [
     { key: 'dashboard', text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { key: 'users', text: 'User Management', icon: <ProfileIcon />, path: '/admin/users' },
-    { key: 'content', text: 'Content Management', icon: <ContentOverviewIcon />, path: '/admin/content' },
-    { key: 'subjects', text: 'Study', icon: <StudyIcon />, path: '/study' },
+    { key: 'content', text: 'Uploaded Content', icon: <ContentOverviewIcon />, path: '/admin/content' },
+    { key: 'subjects', text: role === 'student' ? 'Subjects' : 'Classes', icon: <StudyIcon />, path: '/study' },
     { key: 'new-lesson', text: 'New Lesson', icon: <AddIcon />, path: '/content/create' },
-    { key: 'study-material', text: 'Study Material', icon: <Description />, path: '/study-material' },
-    { key: 'subject-topic', text: 'Subject & Topic', icon: <TopicManagerIcon />, path: '/topics/manage' },
-    { key: 'play', text: 'Play', icon: <PlayIcon />, path: '/play' },
+    { key: 'study-material', text: 'Notes', icon: <Description />, path: '/study-material' },
+    { key: 'subject-topic', text: 'Add Subject & Topic', icon: <TopicManagerIcon />, path: '/topics/manage' },
+    { key: 'quizzes', text: 'Quizzes', icon: <QuizIcon />, path: '/play#quizzes' },
     { key: 'progress', text: 'Progress', icon: <ProgressIcon />, path: '/progress' },
     { key: 'achievements', text: 'Achievements', icon: <AchievementsIcon />, path: '/achievements' },
-    { key: 'assignments', text: 'Assignments', icon: <AssignmentIcon />, path: assignmentPath },
+    { key: 'assignments', text: 'Home Work', icon: <AssignmentIcon />, path: assignmentPath },
     { key: 'attendance', text: 'Attendance', icon: <AttendanceIcon />, path: attendancePath },
     { key: 'class-management', text: 'Class Management', icon: <ClassManagementIcon />, path: '/classes/manage' },
-    { key: 'doubts', text: 'Doubts', icon: <DoubtIcon />, path: '/doubts' },
+    { 
+      key: 'doubts', 
+      text: role === 'teacher' ? 'Student Doubts' : 'Doubts', 
+      icon: <DoubtIcon />, 
+      path: role === 'teacher' ? '/dashboard?tab=1' : '/doubts' 
+    },
     { key: 'reports', text: 'Reports', icon: <ReportsIcon />, path: '/reports' },
     { key: 'reports-issues', text: 'Reports & Issues', icon: <ReportsIcon />, path: '/admin/reports' },
     { key: 'communications', text: 'Class Communication', icon: <CampaignIcon />, path: '/class-communication' },
@@ -159,11 +165,15 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
   ];
 
   const isSelected = (item) => {
+    if (!item.path) return false;
     if (item.key === 'dashboard') {
       return location.pathname === '/dashboard' && !currentTab;
     }
     if (item.path.startsWith('/dashboard?tab=')) {
       return location.pathname === '/dashboard' && currentPath === item.path;
+    }
+    if (item.key === 'quizzes') {
+      return location.pathname === '/play' && location.hash === '#quizzes';
     }
     return location.pathname === item.path;
   };
@@ -175,8 +185,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
     }
     return true;
   }).filter(({ key }) => {
-    // Basic role guards: students don't see teacher/admin only links when not allowed
-    if (key === 'assignments' || key === 'reports' || key === 'reports-issues' || key === 'new-lesson' || key === 'subject-topic' || key === 'business-settings' || key === 'communications' || key === 'class-management' || key === 'study-material') {
+    if (key === 'assignments' || key === 'reports' || key === 'reports-issues' || key === 'new-lesson' || key === 'subject-topic' || key === 'business-settings' || key === 'communications' || key === 'class-management' || key === 'study-material' || key === 'quizzes') {
       return role === 'teacher' || role === 'admin' || role === 'student' || allowed.has(key);
     }
     if (key === 'feedback') {
@@ -231,7 +240,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
           </Typography>
           <Chip
             icon={<StarIcon />}
-            label={`${user?.points || 0} Points`}
+            label={user?.role === 'student' ? `${user?.points || 0} Daily Stars` : `${user?.points || 0} Points`}
             size="small"
             color="primary"
             sx={{ mt: 1 }}
@@ -271,7 +280,13 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
               >
                 {item.icon}
               </ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemText 
+                primary={item.text} 
+                primaryTypographyProps={{ 
+                  fontSize: '0.9rem', 
+                  fontWeight: isSelected(item) ? 'bold' : '500' 
+                }} 
+              />
             </ListItemButton>
           </ListItem>
         ))}

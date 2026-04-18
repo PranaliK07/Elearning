@@ -12,27 +12,26 @@ const {
   submitQuiz,
   getQuizResults,
   getQuizLeaderboard,
-  getQuizStats
+  getQuizStats,
+  getAvailableQuizzes
 } = require('../controllers/quizController');
 
-// All routes require authentication
-router.use(protect);
-
 // Public quiz routes
+router.get('/available', getAvailableQuizzes);
 router.get('/', getQuizzes);
 router.get('/:id', getQuiz);
 router.get('/:id/questions', getQuiz);
-router.get('/:id/results', getQuizResults);
 router.get('/:id/leaderboard', getQuizLeaderboard);
 router.get('/:id/stats', getQuizStats);
 
-// Quiz taking routes
-router.post('/:id/start', startQuiz);
-router.post('/:id/submit', submitQuiz);
+// Protected / user-specific quiz routes
+router.get('/:id/results', protect, getQuizResults);
+router.post('/:id/start', protect, startQuiz);
+router.post('/:id/submit', protect, submitQuiz);
 
 // Teacher and Admin routes
-router.post('/', authorize('teacher', 'admin'), validate.quiz, validate.handleValidationErrors, createQuiz);
-router.put('/:id', authorize('teacher', 'admin'), validate.quiz, validate.handleValidationErrors, updateQuiz);
-router.delete('/:id', authorize('teacher', 'admin'), deleteQuiz);
+router.post('/', protect, authorize('teacher', 'admin'), validate.quiz, validate.handleValidationErrors, createQuiz);
+router.put('/:id', protect, authorize('teacher', 'admin'), validate.quiz, validate.handleValidationErrors, updateQuiz);
+router.delete('/:id', protect, authorize('teacher', 'admin'), deleteQuiz);
 
 module.exports = router;

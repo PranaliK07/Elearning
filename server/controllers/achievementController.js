@@ -1,4 +1,5 @@
-const { Achievement, User } = require('../models');
+const { Achievement, User, Progress, WatchTime, Submission, Comment, Like, Attendance } = require('../models');
+const { Op } = require('sequelize');
 
 const getAchievements = async (req, res) => {
   try {
@@ -9,6 +10,79 @@ const getAchievements = async (req, res) => {
     res.json(achievements);
   } catch (error) {
     console.error('Get achievements error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const getDailyGoalProgress = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. Check Video Progress (WatchTime today)
+    const videoToday = await WatchTime.findOne({
+      where: {
+        UserId: userId,
+        date: today
+      }
+    });
+
+    // 2. Check Quiz Progress (Last Quiz Attempt today)
+    const quizToday = await Progress.findOne({
+      where: {
+        UserId: userId,
+        QuizId: { [Op.ne]: null },
+        lastQuizAttempt: { [Op.gte]: today }
+      }
+    });
+
+    // 3. Check Homework (Submission today)
+    const homeworkToday = await Submission.findOne({
+      where: {
+        studentId: userId,
+        status: { [Op.ne]: 'late' },
+        submittedAt: { [Op.gte]: today }
+      }
+    });
+
+    // 4. Check Lesson Practice (Any Progress today where QuizId is null)
+    const practiceToday = await Progress.findOne({
+      where: {
+        UserId: userId,
+        QuizId: null,
+        updatedAt: { [Op.gte]: today }
+      }
+    });
+
+    // 5. Check Attendance (Present today)
+    const todayDateOnly = today.toISOString().split('T')[0];
+    const attendanceToday = await Attendance.findOne({
+      where: {
+        studentId: userId,
+        date: todayDateOnly,
+        status: 'present'
+      }
+    });
+
+    const goals = [
+      { id: 'video', label: 'Watch Video', completed: !!videoToday, icon: '📺' },
+      { id: 'quiz', label: 'Solve Quiz', completed: !!quizToday, icon: '🧠' },
+      { id: 'homework', label: 'Done Homework', completed: !!homeworkToday, icon: '📝' },
+      { id: 'practice', label: 'Lesson Practice', completed: !!practiceToday, icon: '📖' },
+      { id: 'attendance', label: 'Attendance', completed: !!attendanceToday, icon: '📅' }
+    ];
+
+    const starsEarned = goals.filter(g => g.completed).length;
+
+    res.json({
+      success: true,
+      goals,
+      starsEarned,
+      message: starsEarned === 5 ? "MAX STARS EARNED! You are a Genius! 🌟🚀" : "Keep going for all 5 stars!"
+    });
+  } catch (error) {
+    console.error('Get daily goal error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -201,5 +275,6 @@ module.exports = {
   getAchievementLeaderboard,
   createAchievement,
   updateAchievement,
-  deleteAchievement
+  deleteAchievement,
+  getDailyGoalProgress
 };

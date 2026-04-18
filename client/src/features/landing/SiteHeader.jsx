@@ -27,11 +27,14 @@ import {
   Home,
   Info,
   Contacts,
-  Login
+  Login,
+  Dashboard
 } from '@mui/icons-material';
+import { useAuth } from '../../context/AuthContext';
 import elsLogo from '../../img/els-logo.png';
 
 const SiteHeader = () => {
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const theme = useTheme();
@@ -210,29 +213,55 @@ const SiteHeader = () => {
                     {link.label}
                   </Button>
                 ))}
-                <Button
-                  component={Link}
-                  to="/login"
-                  variant="contained"
-                  startIcon={<Login sx={{ fontSize: 18 }} />}
-                  sx={{
-                    ml: 1,
-                    background: 'linear-gradient(135deg, #0B1F3B 0%, #B0125B 100%)',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 3,
-                    py: 1,
-                    borderRadius: '50px',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #08162B 0%, #C2185B 100%)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 15px rgba(11,31,59,0.3)'
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Login
-                </Button>
+                {user ? (
+                  <Button
+                    component={Link}
+                    to="/dashboard"
+                    variant="contained"
+                    startIcon={<Dashboard sx={{ fontSize: 18 }} />}
+                    sx={{
+                      ml: 1,
+                      background: 'linear-gradient(135deg, #0B1F3B 0%, #B0125B 100%)',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1,
+                      borderRadius: '50px',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #08162B 0%, #C2185B 100%)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 15px rgba(11,31,59,0.3)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Dashboard
+                  </Button>
+                ) : (
+                  <Button
+                    component={Link}
+                    to="/login"
+                    variant="contained"
+                    startIcon={<Login sx={{ fontSize: 18 }} />}
+                    sx={{
+                      ml: 1,
+                      background: 'linear-gradient(135deg, #0B1F3B 0%, #B0125B 100%)',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1,
+                      borderRadius: '50px',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #08162B 0%, #C2185B 100%)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 15px rgba(11,31,59,0.3)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Login
+                  </Button>
+                )}
               </Stack>
             ) : (
               <IconButton color="inherit" onClick={toggleDrawer(true)} sx={{ color: '#1F2937' }}>
@@ -269,20 +298,37 @@ const SiteHeader = () => {
           ))}
           <Divider sx={{ my: 2 }} />
           <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/login"
-              onClick={toggleDrawer(false)}
-              sx={{
-                bgcolor: 'primary.main',
-                color: 'white',
-                borderRadius: 2,
-                '&:hover': { bgcolor: 'primary.dark' }
-              }}
-            >
-              <Box sx={{ mr: 2 }}><Login /></Box>
-              <ListItemText primary="Login" primaryTypographyProps={{ fontWeight: 700 }} />
-            </ListItemButton>
+            {user ? (
+              <ListItemButton
+                component={Link}
+                to="/dashboard"
+                onClick={toggleDrawer(false)}
+                sx={{
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  borderRadius: 2,
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                <Box sx={{ mr: 2 }}><Dashboard /></Box>
+                <ListItemText primary="Dashboard" primaryTypographyProps={{ fontWeight: 700 }} />
+              </ListItemButton>
+            ) : (
+              <ListItemButton
+                component={Link}
+                to="/login"
+                onClick={toggleDrawer(false)}
+                sx={{
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  borderRadius: 2,
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                <Box sx={{ mr: 2 }}><Login /></Box>
+                <ListItemText primary="Login" primaryTypographyProps={{ fontWeight: 700 }} />
+              </ListItemButton>
+            )}
           </ListItem>
         </List>
       </Drawer>

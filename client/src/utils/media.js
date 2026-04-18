@@ -30,7 +30,7 @@ export const getApiBaseUrl = () => {
   const configured = import.meta.env.VITE_API_BASE_URL;
   if (configured) return configured;
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:5000';
+    return ''; // Use relative URLs for proxy
   }
   return '/';
 };

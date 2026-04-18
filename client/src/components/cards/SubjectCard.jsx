@@ -127,17 +127,17 @@ const SubjectCard = ({ subject, progress, onClick, index }) => {
 
           <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip
-              label={`${subject.topicCount || 8} Topics`}
+              label={`${subject.topicCount ?? 0} Topics`}
               size="small"
               variant="outlined"
             />
             <Chip
-              label={`${subject.videoCount || 12} Videos`}
+              label={`${subject.videoCount ?? 0} Videos`}
               size="small"
               variant="outlined"
             />
             <Chip
-              label={`${subject.quizCount || 5} Quizzes`}
+              label={`${subject.quizCount ?? 0} Quizzes`}
               size="small"
               variant="outlined"
             />

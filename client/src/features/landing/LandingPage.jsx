@@ -264,7 +264,6 @@ const LandingPage = () => {
                       Transform Learning Into
                       <Box component="span" sx={{ 
                         display: 'block', 
-                        color: brandPink,
                         backgroundImage: `linear-gradient(45deg, ${brandPink}, #FF6B6B)`,
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',

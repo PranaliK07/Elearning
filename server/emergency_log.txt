@@ -1,0 +1,162 @@
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:45:42.622Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:45:42.657Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:53:53.315Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:53:53.343Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:56:12.561Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:56:12.589Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:57:23.846Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:57:23.874Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:58:03.405Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:58:03.437Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:58:48.427Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:58:48.457Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:59:55.869Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-17T15:59:56.064Z
+Path: /api/achievements/user
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T04:48:16.113Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T04:48:16.180Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T04:50:46.334Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T04:50:47.494Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T04:57:36.666Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T04:57:47.921Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T05:06:07.270Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T05:06:18.275Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T05:07:54.821Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T05:10:11.112Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T05:11:16.423Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T05:12:25.193Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
+
+--- 500 ERROR ---
+Time: 2026-04-18T05:12:55.672Z
+Path: /api/subjects?gradeId=1
+Method: GET
+IP: ::1
