@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Avatar,
   Box,
   Button,
   Card,
@@ -15,6 +16,7 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
+  Paper,
   Select,
   Stack,
   Table,
@@ -24,7 +26,9 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography
+  Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -58,6 +62,8 @@ const formatDateLabel = (dateOnly) => {
 };
 
 const TeacherAttendance = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [classes, setClasses] = useState([]);
   const [selectedGradeId, setSelectedGradeId] = useState('');
   const [date, setDate] = useState(todayDateOnly());
@@ -447,8 +453,8 @@ const TeacherAttendance = () => {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.6rem', sm: '2.125rem' } }}>
         Attendance Management
       </Typography>
       <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
@@ -456,9 +462,10 @@ const TeacherAttendance = () => {
       </Typography>
 
       <Card sx={{ borderRadius: 4 }}>
-        <CardContent>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          {/* ── Filters row ── */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
-            <FormControl fullWidth sx={{ minWidth: 220 }}>
+            <FormControl fullWidth>
               <InputLabel id="attendance-class-label">Class</InputLabel>
               <Select
                 labelId="attendance-class-label"
@@ -493,18 +500,41 @@ const TeacherAttendance = () => {
 
           <Divider sx={{ my: 2 }} />
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+          {/* ── Stats chips + Action buttons ── */}
+          {/* Row 1: stat chips */}
+          <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
             <Chip label={`Present: ${presentCount}`} color="success" variant="outlined" />
             <Chip label={`Absent: ${absentCount}`} color="error" variant="outlined" />
-            <Box sx={{ flex: 1 }} />
-            <Button variant="outlined" onClick={() => setAll('present')} disabled={loading || saving}>
+          </Stack>
+
+          {/* Row 2: action buttons — wrap on mobile */}
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 1,
+              '& > button': { flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' } }
+            }}
+          >
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setAll('present')}
+              disabled={loading || saving}
+            >
               Mark All Present
             </Button>
-            <Button variant="outlined" onClick={() => setAll('absent')} disabled={loading || saving}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setAll('absent')}
+              disabled={loading || saving}
+            >
               Mark All Absent
             </Button>
             <Button
               variant="outlined"
+              size="small"
               onClick={() => {
                 setReportOpen(true);
                 setReportFrom(shiftDays(-30));
@@ -515,23 +545,96 @@ const TeacherAttendance = () => {
             >
               Attendance Report
             </Button>
-            <Button variant="contained" onClick={save} disabled={loading || saving || rows.length === 0}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={save}
+              disabled={loading || saving || rows.length === 0}
+              sx={{ flex: { xs: '1 1 100% !important', sm: '0 0 auto' } }}
+            >
               {saving ? 'Saving...' : 'Save Attendance'}
             </Button>
-          </Stack>
+          </Box>
 
+          {/* ── Student list ── */}
           <Box sx={{ mt: 2 }}>
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                 <CircularProgress />
               </Box>
+            ) : filteredRows.length === 0 ? (
+              <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 4 }}>
+                No students found.
+              </Typography>
+            ) : isMobile ? (
+              // ── Mobile card layout ────────────────────────────────────
+              <Stack spacing={1.5}>
+                {filteredRows.map((r) => (
+                  <Paper
+                    key={r.id}
+                    variant="outlined"
+                    sx={{ p: 2, borderRadius: 2 }}
+                  >
+                    {/* Student info */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                      <Avatar
+                        src={resolveAvatarSrc(r.avatar)}
+                        alt={r.name}
+                        sx={{ width: 40, height: 40 }}
+                      >
+                        {r.name?.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" fontWeight={700} noWrap>
+                          {r.name}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary" noWrap>
+                          {r.email}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Status selector */}
+                    <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                      <Button
+                        size="small"
+                        fullWidth
+                        variant={r.status === 'present' ? 'contained' : 'outlined'}
+                        color="success"
+                        onClick={() => updateRow(r.id, { status: 'present' })}
+                      >
+                        Present
+                      </Button>
+                      <Button
+                        size="small"
+                        fullWidth
+                        variant={r.status === 'absent' ? 'contained' : 'outlined'}
+                        color="error"
+                        onClick={() => updateRow(r.id, { status: 'absent' })}
+                      >
+                        Absent
+                      </Button>
+                    </Stack>
+
+                    {/* Note */}
+                    <TextField
+                      size="small"
+                      fullWidth
+                      placeholder="Optional note"
+                      value={r.note}
+                      onChange={(e) => updateRow(r.id, { note: e.target.value })}
+                    />
+                  </Paper>
+                ))}
+              </Stack>
             ) : (
+              // ── Desktop table layout ──────────────────────────────────
               <TableContainer component={Box} sx={{ maxHeight: 520, overflowX: 'auto' }}>
-                <Table stickyHeader size="small" sx={{ minWidth: 720 }}>
+                <Table stickyHeader size="small" sx={{ minWidth: 600 }}>
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 700, width: 160 }}>Status</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Note</TableCell>
                     </TableRow>
                   </TableHead>
@@ -544,13 +647,13 @@ const TeacherAttendance = () => {
                               component="img"
                               alt={r.name}
                               src={resolveAvatarSrc(r.avatar)}
-                              sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: 'grey.100' }}
+                              sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: 'grey.100', flexShrink: 0 }}
                               onError={(e) => {
                                 e.currentTarget.onerror = null;
                                 e.currentTarget.src = '';
                               }}
                             />
-                            <Box>
+                            <Box sx={{ minWidth: 0 }}>
                               <Typography variant="body2" fontWeight={700} noWrap>
                                 {r.name}
                               </Typography>
@@ -560,7 +663,7 @@ const TeacherAttendance = () => {
                             </Box>
                           </Box>
                         </TableCell>
-                        <TableCell sx={{ width: 180 }}>
+                        <TableCell sx={{ width: 160 }}>
                           <FormControl fullWidth>
                             <Select
                               size="small"
@@ -583,15 +686,6 @@ const TeacherAttendance = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {filteredRows.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={3}>
-                          <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 3 }}>
-                            No students found.
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -690,29 +784,40 @@ const TeacherAttendance = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 2, pb: 2, flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'stretch', sm: 'flex-end' } }}>
           <Button
             onClick={downloadPDF}
             variant="outlined"
+            size="small"
             disabled={reportLoading || report.students.length === 0 || report.dates.length === 0}
+            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' } }}
           >
             Download PDF
           </Button>
           <Button
             onClick={downloadWord}
             variant="outlined"
+            size="small"
             disabled={reportLoading || report.students.length === 0 || report.dates.length === 0}
+            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' } }}
           >
             Download Word
           </Button>
           <Button
             onClick={downloadExcel}
             variant="outlined"
+            size="small"
             disabled={reportLoading || report.students.length === 0 || report.dates.length === 0}
+            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' } }}
           >
             Download Excel
           </Button>
-          <Button onClick={() => setReportOpen(false)} variant="outlined">
+          <Button
+            onClick={() => setReportOpen(false)}
+            variant="outlined"
+            size="small"
+            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' } }}
+          >
             Close
           </Button>
         </DialogActions>

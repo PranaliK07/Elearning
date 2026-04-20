@@ -50,7 +50,7 @@ const ContentManagement = () => {
     const [grades, setGrades] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [topics, setTopics] = useState([]);
-    const [selectedType, setSelectedType] = useState('video');
+    const [selectedType, setSelectedType] = useState(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -219,6 +219,7 @@ const ContentManagement = () => {
             });
             setQuestions([{ id: Date.now(), question: '', options: ['', '', '', ''], correctAnswer: '' }]);
             setVideoFile(null); setThumbnailFile(null); setReadingFile(null);
+            setSelectedType(null);
         } catch (error) {
             console.error('Content post error:', error);
             const errorMessage = error.response?.data?.message || 'Failed to post content';
@@ -234,29 +235,36 @@ const ContentManagement = () => {
         { id: 'quiz', title: 'Interactive Quiz', icon: <QuizIcon sx={{ fontSize: 40 }} />, color: '#FF9800' }
     ];
 
+    if (!selectedType) {
+        return (
+            <Container maxWidth="xl" sx={{ py: 4 }}>
+                <Typography variant="h4" sx={{ fontWeight: 800, mb: 4, textAlign: 'center' }}>Learning Content Hub</Typography>
+
+                <Grid container spacing={3} sx={{ mb: 6 }}>
+                    {categoryCards.map((card) => (
+                        <Grid size={{ xs: 12, md: 4 }} key={card.id}>
+                            <Card 
+                                sx={{ 
+                                    borderRadius: 4, 
+                                    border: selectedType === card.id ? `3px solid ${card.color}` : '3px solid transparent',
+                                    boxShadow: selectedType === card.id ? 10 : 2
+                                }}
+                            >
+                                <CardActionArea onClick={() => setSelectedType(card.id)} sx={{ p: 3, textAlign: 'center' }}>
+                                    <Box sx={{ color: card.color, mb: 1 }}>{card.icon}</Box>
+                                    <Typography variant="h6" fontWeight="bold">{card.title}</Typography>
+                                </CardActionArea>
+                            </Card>
+                        </Grid>
+                    ))}
+                </Grid>
+            </Container>
+        );
+    }
+
     return (
         <Container maxWidth="xl" sx={{ py: 4 }}>
-            <Typography variant="h4" sx={{ fontWeight: 800, mb: 4, textAlign: 'center' }}>Learning Content Hub</Typography>
-
-            <Grid container spacing={3} sx={{ mb: 6 }}>
-                {categoryCards.map((card) => (
-                    <Grid size={{ xs: 12, md: 4 }} key={card.id}>
-                        <Card 
-                            sx={{ 
-                                borderRadius: 4, 
-                                border: selectedType === card.id ? `3px solid ${card.color}` : '3px solid transparent',
-                                boxShadow: selectedType === card.id ? 10 : 2
-                            }}
-                        >
-                            <CardActionArea onClick={() => setSelectedType(card.id)} sx={{ p: 3, textAlign: 'center' }}>
-                                <Box sx={{ color: card.color, mb: 1 }}>{card.icon}</Box>
-                                <Typography variant="h6" fontWeight="bold">{card.title}</Typography>
-                            </CardActionArea>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
-
+            <Box sx={{ mb: 2 }}><Button onClick={() => setSelectedType(null)}>Back</Button></Box>
             <Paper sx={{ p: 4, borderRadius: 4, mb: 6, boxShadow: 3 }}>
                 <form onSubmit={handleSubmit}>
                     <Grid container spacing={3}>
@@ -358,13 +366,10 @@ const ContentManagement = () => {
                                 <Grid size={12}><TextField fullWidth multiline rows={3} label="Description" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} /></Grid>
                             </>
                         )}
-
                         <Grid size={12}><Button variant="contained" type="submit" fullWidth size="large" disabled={loading} sx={{ py: 2 }}>{loading ? <CircularProgress size={24} color="inherit" /> : `Publish ${selectedType}`}</Button></Grid>
                     </Grid>
                 </form>
             </Paper>
-
-            {/* The table has been moved to a dedicated Uploaded Content page */}
 
             <Dialog open={topicDialogOpen} onClose={() => setTopicDialogOpen(false)}>
                 <DialogTitle>Quick Topic Setup</DialogTitle>

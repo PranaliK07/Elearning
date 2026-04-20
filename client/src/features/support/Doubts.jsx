@@ -18,7 +18,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  alpha
+  alpha,
+  Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import {
   Send,
@@ -26,7 +30,10 @@ import {
   CheckCircle,
   Pending,
   Person,
-  ChatBubbleOutline
+  ChatBubbleOutline,
+  School,
+  ExpandMore as ExpandMoreIcon,
+  ArrowBack
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/axios';
@@ -46,9 +53,9 @@ const Doubts = () => {
   const [question, setQuestion] = useState('');
   
   // Teacher state
-  const [responseOpen, setResponseOpen] = useState(false);
-  const [currentDoubt, setCurrentDoubt] = useState(null);
-  const [answer, setAnswer] = useState('');
+  const [replyingId, setReplyingId] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [selectedClass, setSelectedClass] = useState(null);
 
   useEffect(() => {
     fetchDoubts();
@@ -69,9 +76,21 @@ const Doubts = () => {
     }
   };
 
+  const handleReplyDoubt = async (doubtId) => {
+    if (!replyText.trim()) return;
+    try {
+      await api.put(`/api/doubts/${doubtId}/respond`, { answer: replyText });
+      setReplyingId(null);
+      setReplyText('');
+      fetchDoubts();
+    } catch (err) {
+      console.error('Failed to send reply', err);
+    }
+  };
+
   const fetchTeachers = async () => {
     try {
-      const res = await api.get('/api/doubts/teachers');
+      const res = await api.get('/api/users/teachers');
       setTeachers(res.data);
     } catch (err) {
       console.error('Fetch teachers error', err);
@@ -81,7 +100,6 @@ const Doubts = () => {
   const handleSubmitDoubt = async (e) => {
     e.preventDefault();
     if (!selectedTeacher || !question.trim()) return;
-
     setSubmitting(true);
     try {
       await api.post('/api/doubts', {
@@ -98,36 +116,15 @@ const Doubts = () => {
     }
   };
 
-  const handleOpenResponse = (doubt) => {
-    setCurrentDoubt(doubt);
-    setAnswer(doubt.answer || '');
-    setResponseOpen(true);
-  };
-
-  const handleSubmitResponse = async () => {
-    if (!answer.trim()) return;
-
-    try {
-      await api.put(`/api/doubts/${currentDoubt.id}/respond`, { answer });
-      setResponseOpen(false);
-      fetchDoubts();
-    } catch (err) {
-      console.error('Submit response error', err);
-    }
-  };
-
   const getStatusChip = (status) => {
-    const isResolved = status === 'resolved';
-    return (
-      <Chip
-        icon={isResolved ? <CheckCircle /> : <Pending />}
-        label={isResolved ? 'Resolved' : 'Pending'}
-        size="small"
-        color={isResolved ? 'success' : 'warning'}
-        sx={{ fontWeight: 'bold' }}
-      />
+    return status === 'resolved' ? (
+      <Chip icon={<CheckCircle sx={{ fontSize: 16 }} />} label="RESOLVED" color="success" size="small" sx={{ fontWeight: 'bold' }} />
+    ) : (
+      <Chip icon={<Pending sx={{ fontSize: 16 }} />} label="PENDING" color="warning" size="small" sx={{ fontWeight: 'bold' }} />
     );
   };
+
+  const pendingCount = doubts.filter(d => d.status === 'pending').length;
 
   if (loading) {
     return (
@@ -137,8 +134,268 @@ const Doubts = () => {
     );
   }
 
+  // Teacher Specific View
+  if (isTeacher || user?.role === 'admin') {
+    const groupedDoubts = {};
+    doubts.forEach(doubt => {
+      const className = doubt.student?.Grade?.name 
+                     || (doubt.student?.grade ? `Class ${doubt.student.grade}` : 'Class Unassigned');
+      const studentName = doubt.student?.name || 'Unknown Student';
+      
+      if (!groupedDoubts[className]) {
+        groupedDoubts[className] = {};
+      }
+      if (!groupedDoubts[className][studentName]) {
+        groupedDoubts[className][studentName] = [];
+      }
+      groupedDoubts[className][studentName].push(doubt);
+    });
+
+    return (
+      <Box sx={{ py: 2, px: 1 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Paper sx={{ p: 4, borderRadius: 4, boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }}>
+            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h4" fontWeight="800" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <ChatBubbleOutline color="primary" sx={{ fontSize: '2.5rem' }} /> Student Doubts Portal
+                </Typography>
+                <Typography variant="body1" color="textSecondary">
+                  Manage and respond to student questions directly from here.
+                </Typography>
+              </Box>
+              <Chip 
+                label={`${pendingCount} Pending Resolution`} 
+                color={pendingCount > 0 ? "error" : "success"}
+                variant="filled"
+                sx={{ fontWeight: '800', px: 2, py: 2.5, borderRadius: 3, fontSize: '1rem' }}
+              />
+            </Box>
+            
+            <Divider sx={{ mb: 4 }} />
+
+            {doubts.length > 0 ? (
+              <Box>
+                {selectedClass && groupedDoubts[selectedClass] ? (
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                    <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Button 
+                        startIcon={<ArrowBack />} 
+                        onClick={() => setSelectedClass(null)}
+                        variant="outlined"
+                        sx={{ borderRadius: 2 }}
+                      >
+                        Back to Classes
+                      </Button>
+                      <Typography variant="h5" fontWeight="bold">
+                        {selectedClass}
+                      </Typography>
+                    </Box>
+                    
+                    {Object.keys(groupedDoubts[selectedClass]).map(studentName => (
+                      <Accordion key={studentName} sx={{ mb: 2, boxShadow: 1, borderRadius: '8px !important', '&:before': { display: 'none' } }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Avatar sx={{ width: 32, height: 32 }}>
+                              {groupedDoubts[selectedClass][studentName][0]?.student?.avatar ? (
+                                <img src={groupedDoubts[selectedClass][studentName][0]?.student?.avatar} alt={studentName} style={{ width: '100%', borderRadius: '50%' }} />
+                              ) : (
+                                <Person fontSize="small" />
+                              )}
+                            </Avatar>
+                            <Typography fontWeight="bold" variant="subtitle1">{studentName}</Typography>
+                            <Chip 
+                              size="small" 
+                              label={`${groupedDoubts[selectedClass][studentName].length} Doubts`} 
+                              color="secondary" 
+                              sx={{ ml: 2, height: 24, fontWeight: 'bold' }} 
+                            />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
+                          <Stack spacing={3}>
+                            {groupedDoubts[selectedClass][studentName].map((doubt) => (
+                              <Box key={doubt.id} sx={{ 
+                                p: 3, 
+                                borderRadius: 4, 
+                                border: '1px solid',
+                                borderColor: doubt.status === 'pending' ? 'rgba(255,87,34,0.15)' : 'rgba(76,175,80,0.15)',
+                                bgcolor: doubt.status === 'pending' ? 'rgba(255,87,34,0.02)' : 'rgba(76,175,80,0.02)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                              }}>
+                                {/* Status Strip */}
+                                <Box sx={{ 
+                                  position: 'absolute', 
+                                  left: 0, 
+                                  top: 0, 
+                                  bottom: 0, 
+                                  width: 6, 
+                                  bgcolor: doubt.status === 'pending' ? '#ff5722' : '#4caf50' 
+                                }} />
+
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Box>
+                                      <Typography variant="caption" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                          Submitted on: {new Date(doubt.createdAt).toLocaleDateString()} • {new Date(doubt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                  <Chip 
+                                    label={doubt.status.toUpperCase()} 
+                                    size="small" 
+                                    color={doubt.status === 'pending' ? 'warning' : 'success'}
+                                    sx={{ fontWeight: 'bold' }}
+                                  />
+                                </Box>
+
+                                <Typography variant="body1" sx={{ mb: 3, fontWeight: 500, bgcolor: 'rgba(255,255,255,0.5)', p: 2, borderRadius: 2 }}>
+                                  "{doubt.question}"
+                                </Typography>
+
+                                {doubt.answer ? (
+                                  <Box sx={{ bgcolor: 'rgba(76,175,80,0.05)', p: 2, borderRadius: 2, borderLeft: '4px solid #4caf50' }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'success.main', mb: 0.5, display: 'block' }}>
+                                      RESOLVED BY YOU:
+                                    </Typography>
+                                    <Typography variant="body2">{doubt.answer}</Typography>
+                                  </Box>
+                                ) : (
+                                  <Box>
+                                    {replyingId === doubt.id ? (
+                                      <Box>
+                                        <TextField
+                                          fullWidth
+                                          multiline
+                                          rows={3}
+                                          placeholder="Type your expert answer here..."
+                                          value={replyText}
+                                          onChange={(e) => setReplyText(e.target.value)}
+                                          sx={{ mb: 2, bgcolor: 'white' }}
+                                        />
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                          <Button 
+                                            variant="contained" 
+                                            startIcon={<Send />} 
+                                            onClick={() => handleReplyDoubt(doubt.id)}
+                                            disabled={!replyText.trim()}
+                                            sx={{ borderRadius: 2 }}
+                                          >
+                                            Submit Answer
+                                          </Button>
+                                          <Button 
+                                            variant="text" 
+                                            onClick={() => setReplyingId(null)}
+                                            color="inherit"
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </Box>
+                                      </Box>
+                                    ) : (
+                                      <Button 
+                                        variant="outlined" 
+                                        startIcon={<ChatBubbleOutline />}
+                                        onClick={() => { setReplyingId(doubt.id); setReplyText(''); }}
+                                        sx={{ borderRadius: 2 }}
+                                      >
+                                        Provide Answer
+                                      </Button>
+                                    )}
+                                  </Box>
+                                )}
+                              </Box>
+                            ))}
+                          </Stack>
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
+                  </motion.div>
+                ) : (
+                  <Grid container spacing={3}>
+                    {Object.keys(groupedDoubts).map(className => {
+                      const studentNames = Object.keys(groupedDoubts[className]);
+                      let doubtCount = 0;
+                      let classPending = 0;
+                      studentNames.forEach(s => {
+                        groupedDoubts[className][s].forEach(d => {
+                          doubtCount++;
+                          if (d.status === 'pending') classPending++;
+                        });
+                      });
+
+                      return (
+                        <Grid item xs={12} sm={6} md={4} key={className}>
+                          <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
+                            <Card 
+                              onClick={() => setSelectedClass(className)}
+                              sx={{ 
+                                cursor: 'pointer', 
+                                borderRadius: 4, 
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                height: '100%',
+                                borderTop: classPending > 0 ? '4px solid #ff9800' : '4px solid #4caf50'
+                              }}
+                            >
+                              <CardContent>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 1.5 }}>
+                                  <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+                                    <School />
+                                  </Avatar>
+                                  <Box>
+                                    <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                                      {className}
+                                    </Typography>
+                                    {classPending > 0 && (
+                                      <Typography variant="caption" color="warning.main" fontWeight="bold">
+                                        {classPending} Pending Resolution
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </Box>
+                                
+                                <Divider sx={{ mb: 2 }} />
+                                
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Box sx={{ textAlign: 'center' }}>
+                                    <Typography variant="h6" fontWeight="bold" color="textPrimary">
+                                      {studentNames.length}
+                                    </Typography>
+                                    <Typography variant="caption" color="textSecondary">Students</Typography>
+                                  </Box>
+                                  <Box sx={{ textAlign: 'center' }}>
+                                    <Typography variant="h6" fontWeight="bold" color="textPrimary">
+                                      {doubtCount}
+                                    </Typography>
+                                    <Typography variant="caption" color="textSecondary">Total Doubts</Typography>
+                                  </Box>
+                                </Box>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                )}
+              </Box>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 10, opacity: 0.5 }}>
+                <CheckCircle sx={{ fontSize: 80, mb: 2, color: 'success.light' }} />
+                <Typography variant="h6">Inbox is Clear!</Typography>
+                <Typography>No students have pending doubts right now.</Typography>
+              </Box>
+            )}
+          </Paper>
+        </motion.div>
+      </Box>
+    );
+  }
+
+  // Student View
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Box sx={{ py: 4, px: 1 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Box sx={{ mb: 4, textAlign: 'center' }}>
           <Typography variant="h3" fontWeight="900" sx={{ 
@@ -150,14 +407,11 @@ const Doubts = () => {
             Internal Doubt Portal 🙋‍♂️
           </Typography>
           <Typography variant="h6" color="textSecondary">
-            {isStudent 
-              ? 'Message teachers directly within the app.' 
-              : 'Reply to student doubts and help them learn!'}
+            Message teachers directly within the app.
           </Typography>
         </Box>
 
         <Grid container spacing={4}>
-          {isStudent && (
           <Grid item xs={12} md={4}>
             <Paper sx={{ p: 3, borderRadius: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
               <Typography variant="h6" fontWeight="800" gutterBottom>
@@ -224,12 +478,11 @@ const Doubts = () => {
               </Box>
             </Paper>
           </Grid>
-          )}
 
-          <Grid item xs={12} md={isStudent ? 8 : 12}>
+          <Grid item xs={12} md={8}>
             <Typography variant="h5" fontWeight="800" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <ChatBubbleOutline color="primary" />
-              {isStudent ? 'Your Conversations' : 'Inbox: Student Doubts'}
+              Your Conversations
             </Typography>
 
             <AnimatePresence>
@@ -250,10 +503,10 @@ const Doubts = () => {
                       <CardContent>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Avatar src={isStudent ? doubt.teacher?.avatar : doubt.student?.avatar} />
+                            <Avatar src={doubt.teacher?.avatar} />
                             <Box>
                               <Typography variant="subtitle2" fontWeight="800">
-                                {isStudent ? doubt.teacher?.name : doubt.student?.name}
+                                {doubt.teacher?.name}
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
                                 {new Date(doubt.createdAt).toLocaleDateString()}
@@ -267,20 +520,11 @@ const Doubts = () => {
                           <Typography variant="body2"><strong>Message:</strong> {doubt.question}</Typography>
                         </Box>
 
-                        {doubt.answer ? (
+                        {doubt.answer && (
                           <Box sx={{ bgcolor: alpha('#4caf50', 0.06), p: 2, borderRadius: 2 }}>
                             <Typography variant="body2"><strong>Teacher Response:</strong> {doubt.answer}</Typography>
                           </Box>
-                        ) : !isStudent ? (
-                          <Button 
-                            variant="contained" 
-                            size="small" 
-                            onClick={() => handleOpenResponse(doubt)}
-                            sx={{ borderRadius: 2 }}
-                          >
-                            Reply to Message
-                          </Button>
-                        ) : null}
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -290,31 +534,7 @@ const Doubts = () => {
           </Grid>
         </Grid>
       </motion.div>
-
-      <Dialog open={responseOpen} onClose={() => setResponseOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 'bold' }}>Send Reply</DialogTitle>
-        <DialogContent>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>Student asked:</Typography>
-          <Typography variant="body2" sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, mb: 3 }}>
-            {currentDoubt?.question}
-          </Typography>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="Type your response"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setResponseOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmitResponse} disabled={!answer.trim()}>
-            Send Reply
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+    </Box>
   );
 };
 

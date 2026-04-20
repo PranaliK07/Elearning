@@ -22,7 +22,7 @@ const getProgress = async (req, res) => {
 
 const updateProgress = async (req, res) => {
   try {
-    const { contentId, watchTime, completed, quizScore } = req.body;
+    const { contentId, watchTime, completed, quizScore, notesDownloaded } = req.body;
     const userId = req.user.id;
 
     let progress = await Progress.findOne({
@@ -34,7 +34,7 @@ const updateProgress = async (req, res) => {
 
     if (progress) {
       // Update existing progress
-      progress.watchTime += watchTime || 0;
+      if (watchTime !== undefined) progress.watchTime += watchTime || 0;
       progress.lastWatched = new Date();
       
       if (completed !== undefined) {
@@ -46,6 +46,13 @@ const updateProgress = async (req, res) => {
         progress.quizScore = quizScore;
         progress.quizAttempts += 1;
       }
+
+      if (notesDownloaded !== undefined) {
+        progress.notesDownloaded = notesDownloaded;
+        // If notes are downloaded, we can mark the content as partially completed or fully completed depending on logic
+        // For achievement purposes, we just need notesDownloaded to be true
+        if (notesDownloaded) progress.completed = true; 
+      }
       
       await progress.save();
     } else {
@@ -55,9 +62,10 @@ const updateProgress = async (req, res) => {
         ContentId: contentId,
         watchTime: watchTime || 0,
         lastWatched: new Date(),
-        completed: completed || false,
-        completedAt: completed ? new Date() : null,
-        quizScore: quizScore || null
+        completed: completed || notesDownloaded || false,
+        completedAt: (completed || notesDownloaded) ? new Date() : null,
+        quizScore: quizScore || null,
+        notesDownloaded: notesDownloaded || false
       });
     }
 
@@ -133,24 +141,34 @@ const getSubjectProgress = async (req, res) => {
     const { subjectId } = req.params;
     const userId = req.user.id;
 
-    const progress = await Progress.findAll({
+    // Get total number of lessons/content for this subject
+    const totalCount = await Content.count({
+      where: { 
+        SubjectId: subjectId,
+        isPublished: true
+      }
+    });
+
+    const progressRecords = await Progress.findAll({
       where: { UserId: userId },
       include: [{
         model: Content,
-        where: { '$Content.Topic.SubjectId$': subjectId },
-        include: ['Topic']
+        where: { 
+          SubjectId: subjectId,
+          isPublished: true
+        },
+        required: true
       }]
     });
 
-    const total = progress.length;
-    const completed = progress.filter(p => p.completed).length;
-    const percentage = total ? Math.round((completed / total) * 100) : 0;
+    const completed = progressRecords.filter(p => p.completed).length;
+    const percentage = totalCount > 0 ? Math.round((completed / totalCount) * 100) : 0;
 
     res.json({
-      total,
+      total: totalCount,
       completed,
       percentage,
-      progress
+      progress: progressRecords
     });
   } catch (error) {
     console.error('Get subject progress error:', error);
@@ -163,27 +181,34 @@ const getGradeProgress = async (req, res) => {
     const { gradeId } = req.params;
     const userId = req.user.id;
 
-    const progress = await Progress.findAll({
+    // Get total number of lessons/content for this grade
+    const totalCount = await Content.count({
+      where: { 
+        GradeId: gradeId,
+        isPublished: true
+      }
+    });
+
+    const progressRecords = await Progress.findAll({
       where: { UserId: userId },
       include: [{
         model: Content,
-        where: { '$Content.Topic.Subject.GradeId$': gradeId },
-        include: [{
-          model: Topic,
-          include: ['Subject']
-        }]
+        where: { 
+          GradeId: gradeId,
+          isPublished: true
+        },
+        required: true
       }]
     });
 
-    const total = progress.length;
-    const completed = progress.filter(p => p.completed).length;
-    const percentage = total ? Math.round((completed / total) * 100) : 0;
+    const completed = progressRecords.filter(p => p.completed).length;
+    const percentage = totalCount > 0 ? Math.round((completed / totalCount) * 100) : 0;
 
     res.json({
-      total,
+      total: totalCount,
       completed,
       percentage,
-      progress
+      progress: progressRecords
     });
   } catch (error) {
     console.error('Get grade progress error:', error);

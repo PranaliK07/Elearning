@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
@@ -55,80 +55,21 @@ import ContactPage from './features/landing/ContactPage';
 import Doubts from './features/support/Doubts';
 import FeedbackPage from './features/feedback/FeedbackPage';
 import CommunicationDetails from './features/communications/CommunicationDetails';
+import getTheme from './theme/MuiTheme';
 
 
 
 function App() {
   const [mode, setMode] = React.useState('light');
 
-  const theme = createTheme({
-    palette: {
-      mode,
-      primary: {
-        main: '#0B1F3B',
-      },
-      secondary: {
-        main: '#f50057',
-      },
-      background: {
-        default: mode === 'light' ? '#f5f5f5' : '#121212',
-      },
-    },
-    typography: {
-      fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
-      h1: {
-        fontFamily: '"Comic Neue", cursive',
-      },
-      h2: {
-        fontFamily: '"Comic Neue", cursive',
-      },
-      h3: {
-        fontFamily: '"Comic Neue", cursive',
-      },
-      h4: {
-        fontFamily: '"Comic Neue", cursive',
-      },
-      h5: {
-        fontFamily: '"Comic Neue", cursive',
-      },
-      h6: {
-        fontFamily: '"Comic Neue", cursive',
-      },
-    },
-    shape: {
-      borderRadius: 12,
-    },
-    components: {
-      MuiButton: {
-        styleOverrides: {
-          root: {
-            borderRadius: 30,
-            textTransform: 'none',
-            fontWeight: 600,
-          },
-        },
-      },
-      MuiCard: {
-        styleOverrides: {
-          root: {
-            borderRadius: 20,
-            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: '0 12px 20px -10px rgba(0,0,0,0.2)',
-            },
-          },
-        },
-      },
-    },
-  });
+  const theme = React.useMemo(() => getTheme(mode), [mode]);
 
   return (
     <ThemeContext.Provider value={{ mode, setMode }}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <NotificationProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <NotificationProvider>
             <ProgressProvider>
               <Router>
                 <Toaster
@@ -137,8 +78,9 @@ function App() {
                     duration: 3000,
                     style: {
                       borderRadius: '20px',
-                      background: mode === 'light' ? '#fff' : '#333',
-                      color: mode === 'light' ? '#333' : '#fff',
+                      background: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      border: `1px solid ${theme.palette.divider}`,
                     },
                   }}
                 />
@@ -386,8 +328,8 @@ function App() {
                 </Routes>
               </Router>
             </ProgressProvider>
-          </AuthProvider>
-        </NotificationProvider>
+          </NotificationProvider>
+        </AuthProvider>
       </ThemeProvider>
     </ThemeContext.Provider>
   );

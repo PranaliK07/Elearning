@@ -1,5 +1,6 @@
-const { Achievement, User, Progress, WatchTime, Submission, Comment, Like, Attendance } = require('../models');
+const { Achievement, User, Progress, WatchTime, Submission, Comment, Like, Attendance, Content, Quiz, Assignment } = require('../models');
 const { Op } = require('sequelize');
+const { createNotification } = require('../utils/notifications');
 
 const getAchievements = async (req, res) => {
   try {
@@ -20,42 +21,71 @@ const getDailyGoalProgress = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 1. Check Video Progress (WatchTime today)
+    // Calculations based on current time
+    const fortyEightHoursAgo = new Date();
+    fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
+
+    // 1. Check Video Progress (Watched a video today that was uploaded in the last 48 hours)
     const videoToday = await WatchTime.findOne({
       where: {
         UserId: userId,
-        date: today
-      }
+        date: { [Op.gte]: today }
+      },
+      include: [{
+        model: Content,
+        where: { 
+          type: 'video',
+          createdAt: { [Op.gte]: fortyEightHoursAgo }
+        }
+      }]
     });
 
-    // 2. Check Quiz Progress (Last Quiz Attempt today)
+    // 2. Check Quiz Progress (Solved a quiz today that was uploaded in the last 48 hours)
     const quizToday = await Progress.findOne({
       where: {
         UserId: userId,
         QuizId: { [Op.ne]: null },
         lastQuizAttempt: { [Op.gte]: today }
-      }
+      },
+      include: [{
+        model: Quiz,
+        where: { 
+          createdAt: { [Op.gte]: fortyEightHoursAgo }
+        }
+      }]
     });
 
-    // 3. Check Homework (Submission today)
+    // 3. Check Homework (Submitted homework today for an assignment uploaded in the last 48 hours)
     const homeworkToday = await Submission.findOne({
       where: {
         studentId: userId,
-        status: { [Op.ne]: 'late' },
         submittedAt: { [Op.gte]: today }
-      }
+      },
+      include: [{
+        model: Assignment,
+        where: { 
+          createdAt: { [Op.gte]: fortyEightHoursAgo } 
+        }
+      }]
     });
 
-    // 4. Check Lesson Practice (Any Progress today where QuizId is null)
-    const practiceToday = await Progress.findOne({
+    // 4. Check Notes (Viewed/Downloaded notes today that were uploaded in the last 48 hours)
+    const notesToday = await Progress.findOne({
       where: {
         UserId: userId,
-        QuizId: null,
+        notesDownloaded: true,
         updatedAt: { [Op.gte]: today }
-      }
+      },
+      include: [{
+        model: Content,
+        where: { 
+          type: 'reading',
+          createdAt: { [Op.gte]: fortyEightHoursAgo }
+        }
+      }]
     });
 
-    // 5. Check Attendance (Present today)
+    // 5. Check Attendance (Present today - Date based)
     const todayDateOnly = today.toISOString().split('T')[0];
     const attendanceToday = await Attendance.findOne({
       where: {
@@ -69,7 +99,7 @@ const getDailyGoalProgress = async (req, res) => {
       { id: 'video', label: 'Watch Video', completed: !!videoToday, icon: '📺' },
       { id: 'quiz', label: 'Solve Quiz', completed: !!quizToday, icon: '🧠' },
       { id: 'homework', label: 'Done Homework', completed: !!homeworkToday, icon: '📝' },
-      { id: 'practice', label: 'Lesson Practice', completed: !!practiceToday, icon: '📖' },
+      { id: 'notes', label: 'Notes', completed: !!notesToday, icon: '📑' },
       { id: 'attendance', label: 'Attendance', completed: !!attendanceToday, icon: '📅' }
     ];
 
@@ -161,6 +191,15 @@ const checkAndAwardAchievements = async (req, res) => {
           await user.addAchievement(achievement);
           user.points += achievement.points;
           awarded.push(achievement);
+          
+          // Create notification
+          await createNotification(
+            userId,
+            'achievement',
+            'Achievement Earned! 🏆',
+            `Congratulations! You've earned the "${achievement.name}" achievement!`,
+            { achievementId: achievement.id }
+          );
         }
       }
     }

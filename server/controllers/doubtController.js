@@ -1,11 +1,20 @@
-const { Doubt, User, Subject, Notification } = require('../models');
+const { Doubt, User, Subject, Grade } = require('../models');
+const { createNotification } = require('../utils/notifications');
 
 // @desc    Submit a new doubt
 // @route   POST /api/doubts
 // @access  Private (Student)
 const submitDoubt = async (req, res) => {
   try {
-    const { teacherId, subjectId, question } = req.body;
+    const incomingTeacherId = req.body.teacherId || req.body.TeacherId;
+    const teacherId = Number(incomingTeacherId);
+    
+    if (!teacherId || isNaN(teacherId)) {
+      console.error('[Doubt Service] Error: valid teacherId is missing in request body', req.body);
+    }
+    
+    const subjectId = req.body.subjectId || req.body.SubjectId;
+    const { question } = req.body;
     const studentId = req.user.id;
 
     const doubt = await Doubt.create({
@@ -15,18 +24,17 @@ const submitDoubt = async (req, res) => {
       question
     });
 
-    // Send notification to the teacher
-    try {
-      await Notification.create({
-        UserId: teacherId,
-        type: 'doubt',
-        title: 'New Doubt from Student',
-        message: `${req.user.name} has asked a doubt: "${question.substring(0, 100)}${question.length > 100 ? '...' : ''}"`,
-        data: { doubtId: doubt.id, studentId }
-      });
-    } catch (notifErr) {
-      console.error('Notification creation error:', notifErr);
-    }
+    const subject = subjectId ? await Subject.findByPk(subjectId) : null;
+    const subjectPrefix = subject ? `[${subject.name}]` : '';
+
+    await createNotification(
+      teacherId,
+      'doubt',
+      `New Student Doubt ❓ ${subjectPrefix}`,
+      `${req.user.name} posted a question in your class: "${question.substring(0, 60)}..."`,
+      { doubtId: doubt.id, studentId },
+      req.user.id
+    );
 
     res.status(201).json({
       success: true,
@@ -68,7 +76,12 @@ const getTeacherDoubts = async (req, res) => {
     const doubts = await Doubt.findAll({
       where: { teacherId: req.user.id },
       include: [
-        { model: User, as: 'student', attributes: ['id', 'name', 'avatar'] },
+        { 
+          model: User, 
+          as: 'student', 
+          attributes: ['id', 'name', 'avatar', 'grade', 'GradeId'],
+          include: [{ model: Grade, attributes: ['id', 'name'] }]
+        },
         { model: Subject, attributes: ['id', 'name'] }
       ],
       order: [['status', 'ASC'], ['createdAt', 'DESC']]
@@ -102,17 +115,14 @@ const respondToDoubt = async (req, res) => {
     await doubt.save();
 
     // Send notification to the student
-    try {
-      await Notification.create({
-        UserId: doubt.studentId,
-        type: 'doubt',
-        title: 'Doubt Resolved ✅',
-        message: `${req.user.name} has replied to your doubt: "${answer.substring(0, 100)}${answer.length > 100 ? '...' : ''}"`,
-        data: { doubtId: doubt.id, teacherId: req.user.id }
-      });
-    } catch (notifErr) {
-      console.error('Notification creation error:', notifErr);
-    }
+    await createNotification(
+      doubt.studentId,
+      'doubt',
+      'Doubt Answered! 💡',
+      `${req.user.name} provided a solution to your question: "${answer.substring(0, 60)}..."`,
+      { doubtId: doubt.id, teacherId: req.user.id },
+      req.user.id
+    );
 
     res.json({
       success: true,
@@ -128,6 +138,22 @@ const respondToDoubt = async (req, res) => {
 // @desc    Get all teachers
 // @route   GET /api/doubts/teachers
 // @access  Private
+const getAllDoubts = async (req, res) => {
+  try {
+    const doubts = await Doubt.findAll({
+      include: [
+        { model: User, as: 'student', attributes: ['name', 'avatar'] },
+        { model: User, as: 'teacher', attributes: ['name', 'avatar'] },
+        { model: Subject, attributes: ['name'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(doubts);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching all doubts' });
+  }
+};
+
 const getTeachers = async (req, res) => {
   try {
     // Broadening search to find ANY user with role 'teacher' to help debug
@@ -152,5 +178,6 @@ module.exports = {
   getStudentDoubts,
   getTeacherDoubts,
   respondToDoubt,
-  getTeachers
+  getTeachers,
+  getAllDoubts
 };

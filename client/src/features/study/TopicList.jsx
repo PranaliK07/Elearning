@@ -68,10 +68,10 @@ const TopicList = () => {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ px: 1 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontFamily: '"Comic Neue", cursive', fontWeight: 'bold', color: 'primary.main' }}>
+          <Typography variant="h4" component="h1" gutterBottom sx={{ fontFamily: '"Comic Neue", cursive', fontWeight: 'bold', color: 'primary.main', fontSize: { xs: '1.6rem', sm: '2.125rem' } }}>
             {subject?.name || 'Subject'} Topics
           </Typography>
 
@@ -89,7 +89,7 @@ const TopicList = () => {
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Pick a Topic</Typography>
           <Grid container spacing={2}>
             {topics.map((topic, index) => (
-              <Grid item xs={12} sm={6} md={4} key={topic.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={topic.id}>
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.08 }}>
                   <Card
                     onClick={() => handleTopicSelect(topic)}
@@ -133,7 +133,7 @@ const TopicList = () => {
             ))}
 
             {topics.length === 0 && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ p: 3, textAlign: 'center', bgcolor: 'background.paper', borderRadius: 3 }}>
                   <Typography color="textSecondary">No topics available yet.</Typography>
                 </Box>
@@ -142,7 +142,7 @@ const TopicList = () => {
           </Grid>
         </Box>
       </motion.div>
-    </Container>
+    </Box>
   );
 };
 

@@ -134,13 +134,13 @@ const QuizRunner = () => {
   const question = questionsList[currentQuestion];
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ py: 2 }}>
-        <Paper sx={{ p: 2, borderRadius: 4, boxShadow: 3 }}>
+    <Container maxWidth="md" sx={{ px: { xs: 1.5, sm: 2 } }}>
+      <Box sx={{ py: { xs: 1.5, sm: 2 } }}>
+        <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 4, boxShadow: 3 }}>
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: { xs: '1rem', sm: '1.25rem' }, wordBreak: 'break-word' }}>
                 {quiz.title}
               </Typography>
               <Typography variant="caption" color="textSecondary">

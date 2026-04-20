@@ -180,7 +180,7 @@ const WeeklyReport = () => {
 
         {/* Charts Section */}
         <Grid container spacing={isMobile ? 2 : 3} sx={{ mb: { xs: 2, sm: 4 } }}>
-          <Grid item xs={12} md={7}>
+          <Grid size={{ xs: 12, md: 7 }}>
             <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: { xs: 2, sm: 3, md: 4 } }}>
               <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>
                 Daily Watch Time
@@ -196,7 +196,7 @@ const WeeklyReport = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={5}>
+          <Grid size={{ xs: 12, md: 5 }}>
             <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: { xs: 2, sm: 3, md: 4 } }}>
               <Typography variant={isMobile ? "subtitle1" : "h6"} gutterBottom>
                 Time per Subject
@@ -232,7 +232,7 @@ const WeeklyReport = () => {
 
         {/* Achievements and Highlights - Collapsible on Mobile */}
         <Grid container spacing={isMobile ? 2 : 3}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: { xs: 2, sm: 3, md: 4 } }}>
               <Box 
                 sx={{ 
@@ -289,7 +289,7 @@ const WeeklyReport = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: { xs: 2, sm: 3, md: 4 } }}>
               <Box 
                 sx={{ 

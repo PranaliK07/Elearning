@@ -21,6 +21,7 @@ import { motion } from 'framer-motion';
 import axios from '../../utils/axios';
 import ReactMarkdown from 'react-markdown';
 import { useProgress } from '../../context/ProgressContext';
+import { resolveUploadSrc } from '../../utils/media';
 
 const LessonContent = () => {
   const { contentId } = useParams();
@@ -44,12 +45,52 @@ const LessonContent = () => {
   const fetchContent = async () => {
     try {
       const response = await axios.get(`/api/content/${contentId}`);
-      setContent(response.data);
+      const contentData = response.data;
+      setContent(contentData);
+      
+      // Auto-track if it's a reading material
+      if (contentData?.type === 'reading') {
+        await updateProgress(contentData.id, { 
+          notesDownloaded: true, 
+          completed: true 
+        });
+        setCompleted(true);
+      }
     } catch (error) {
       console.error('Error fetching content:', error);
       setContent(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadNote = async () => {
+    if (!content?.readingMaterial) return;
+    
+    try {
+      // Mark as downloaded
+      await updateProgress(content.id, { notesDownloaded: true, completed: true });
+      setCompleted(true);
+      
+      // Trigger robust download
+      const fullUrl = resolveUploadSrc(content.readingMaterial);
+      const response = await fetch(fullUrl);
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${content.title || 'study_notes'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download error:', error);
+      // Fallback
+      window.open(resolveUploadSrc(content.readingMaterial), '_blank');
     }
   };
 
@@ -150,7 +191,7 @@ const LessonContent = () => {
             )}
 
             {content?.type === 'reading' && (
-              <Button variant="outlined" size="large" startIcon={<Download />} sx={{ flex: 1 }}>
+              <Button variant="outlined" size="large" startIcon={<Download />} onClick={handleDownloadNote} sx={{ flex: 1 }}>
                 Download PDF
               </Button>
             )}

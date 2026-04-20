@@ -229,12 +229,31 @@ const getAnnouncements = async (req, res) => {
 
 const getQuickStats = async (req, res) => {
   try {
+    const userId = req.user.id;
+    const gradeId = req.user.GradeId || req.user.grade;
+
+    const totalLessons = await Content.count({
+      where: { GradeId: gradeId, isPublished: true }
+    });
+
+    const completedLessons = await Progress.count({
+      where: { 
+        UserId: userId, 
+        completed: true 
+      },
+      include: [{
+        model: Content,
+        where: { GradeId: gradeId, isPublished: true },
+        required: true
+      }]
+    });
+
     const stats = {
       points: req.user.points,
       streak: req.user.streak,
-      completedLessons: await Progress.count({
-        where: { UserId: req.user.id, completed: true }
-      }),
+      completedLessons,
+      totalLessons,
+      gradeProgress: totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0,
       achievements: await req.user.countAchievements(),
       watchTime: req.user.totalWatchTime
     };

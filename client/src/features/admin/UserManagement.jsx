@@ -131,7 +131,7 @@ const UserManagement = () => {
 
   return (
     <Container maxWidth="lg">
-      <Paper sx={{ p: 3, borderRadius: 3 }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
         <Box
           sx={{
             display: 'flex',
@@ -190,8 +190,8 @@ const UserManagement = () => {
         {loading ? (
           <LinearProgress />
         ) : (
-          <TableContainer>
-            <Table>
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>User</TableCell>
@@ -308,7 +308,7 @@ const UserManagement = () => {
         <DialogTitle>{editingUserId ? 'Edit User' : 'Add New User'}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Full Name"
@@ -321,7 +321,7 @@ const UserManagement = () => {
                 helperText={formErrors.name}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 type="email"
@@ -335,7 +335,7 @@ const UserManagement = () => {
                 helperText={formErrors.email}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select
@@ -354,7 +354,7 @@ const UserManagement = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Grade (if student)"
@@ -369,7 +369,7 @@ const UserManagement = () => {
               />
             </Grid>
             {newUser.role === 'parent' && (
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Parent Mobile Number"
@@ -385,7 +385,7 @@ const UserManagement = () => {
               </Grid>
             )}
             {newUser.role === 'parent' && (
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Student Email to Link"
@@ -400,7 +400,7 @@ const UserManagement = () => {
                 />
               </Grid>
             )}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select

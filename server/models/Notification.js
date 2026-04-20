@@ -27,7 +27,8 @@ const Notification = sequelize.define('Notification', {
       return val ? JSON.parse(val) : {};
     },
     set(val) {
-      this.setDataValue('data', JSON.stringify(val));
+      const stringVal = typeof val === 'string' ? val : JSON.stringify(val || {});
+      this.setDataValue('data', stringVal);
     }
   },
 
@@ -38,6 +39,14 @@ const Notification = sequelize.define('Notification', {
   isDeleted: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  senderId: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   }
 });
 

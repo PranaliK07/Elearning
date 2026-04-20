@@ -116,18 +116,26 @@ const StudentAssignmentView = () => {
 
       <Paper sx={{ p: 4, borderRadius: 4, mb: 4, borderTop: '8px solid #0B1F3B' }}>
         <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-              <Box>
-                <Typography variant="h5" color="primary" fontWeight="bold" gutterBottom>{assignment.title}</Typography>
-                <Chip label={assignment.Subject?.name || 'Subject'} size="small" sx={{ mr: 1, bgcolor: 'primary.light', color: 'white' }} />
-                <Chip label={`Due: ${assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : '-'}`} variant="outlined" size="small" />
+          <Grid size={12}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', sm: 'flex-start' }}
+              flexDirection={{ xs: 'row', sm: 'row' }}
+              gap={1}
+            >
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="h5" color="primary" fontWeight="bold" gutterBottom sx={{ wordBreak: 'break-word' }}>{assignment.title}</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  <Chip label={assignment.Subject?.name || 'Subject'} size="small" sx={{ bgcolor: 'primary.light', color: 'white' }} />
+                  <Chip label={`Due: ${assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : '-'}`} variant="outlined" size="small" />
+                </Box>
               </Box>
-              <Avatar sx={{ bgcolor: 'secondary.main', width: 56, height: 56 }}><Assignment fontSize="large" /></Avatar>
+              <Avatar sx={{ bgcolor: 'secondary.main', width: { xs: 44, sm: 56 }, height: { xs: 44, sm: 56 }, flexShrink: 0 }}><Assignment fontSize="large" /></Avatar>
             </Box>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Divider sx={{ my: 1 }} />
             <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Instructions</Typography>
             <Typography variant="body1" color="textSecondary" sx={{ whiteSpace: 'pre-wrap' }}>
@@ -203,8 +211,20 @@ const StudentAssignmentView = () => {
               </>
             )}
           </Box>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Button variant="contained" size="large" disabled={( !content.trim() && !fileUrl) || alreadySubmitted} onClick={handleSubmit} sx={{ px: 4, borderRadius: 5 }}>
+          <Box
+            display="flex"
+            justifyContent={{ xs: 'center', sm: 'space-between' }}
+            alignItems="center"
+            flexWrap="wrap"
+            gap={1}
+          >
+            <Button
+              variant="contained"
+              size="large"
+              disabled={(!content.trim() && !fileUrl) || alreadySubmitted}
+              onClick={handleSubmit}
+              sx={{ px: 4, borderRadius: 5, width: { xs: '100%', sm: 'auto' } }}
+            >
               {alreadySubmitted ? 'Submitted' : 'Submit Assignment'}
             </Button>
           </Box>

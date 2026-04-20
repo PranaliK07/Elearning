@@ -1,4 +1,4 @@
-const { Quiz, Progress, User, Topic, Lesson, Subject, Grade } = require('../models');
+const { Quiz, Progress, Notification, User, Topic, Lesson, Subject, Grade } = require('../models');
 const { Op } = require('sequelize');
 
 const normalizeQuestions = (questions) => {
@@ -175,6 +175,63 @@ const createQuiz = async (req, res) => {
       isPublished: isPublished !== undefined ? isPublished : true,
       createdBy: req.user.id
     });
+
+    // Notify students and teachers about the new quiz
+    try {
+      const topic = await Topic.findByPk(topicId, {
+        include: [{ model: Subject, include: [Grade] }]
+      });
+      const gradeId = topic?.Subject?.GradeId;
+      const gradeLevel = topic?.Subject?.Grade?.level;
+      
+      const students = await User.findAll({
+        where: {
+          role: 'student',
+          ...(gradeId
+            ? {
+                [Op.or]: [
+                  { GradeId: gradeId },
+                  ...(gradeLevel ? [{ grade: gradeLevel }] : [])
+                ]
+              }
+            : {})
+        },
+        attributes: ['id']
+      });
+      
+      const teachers = await User.findAll({
+        where: {
+          role: 'teacher',
+          isActive: true,
+          isDeleted: false,
+          id: { [Op.ne]: req.user.id }
+        },
+        attributes: ['id']
+      });
+
+      if (students.length > 0 || teachers.length > 0) {
+        await Notification.bulkCreate([
+          ...students.map((student) => ({
+            userId: student.id,
+            senderId: req.user.id,
+            type: 'quiz_result',
+            title: 'New Quiz Uploaded',
+            message: `A new quiz "${title}" has been posted in ${topic?.name || 'your class'}.`,
+            data: { quizId: quiz.id, topicId, gradeId }
+          })),
+          ...teachers.map((teacher) => ({
+            userId: teacher.id,
+            senderId: req.user.id,
+            type: 'announcement',
+            title: 'Quiz Uploaded',
+            message: `A new quiz "${title}" has been uploaded in ${topic?.name || 'your class'}.`,
+            data: { quizId: quiz.id, topicId, gradeId }
+          }))
+        ]);
+      }
+    } catch (notifErr) {
+      console.error('Create quiz notification error:', notifErr);
+    }
 
     res.status(201).json({
       success: true,

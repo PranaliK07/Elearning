@@ -20,7 +20,9 @@ import {
   alpha,
   useTheme,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  Fade,
+  useMediaQuery
 } from '@mui/material';
 import {
   PlayCircle,
@@ -180,6 +182,7 @@ const SubjectCard = ({ subject, color, icon: Icon, onClick }) => (
 const StudentHome = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
   const { getGradeProgress, watchTimeStats } = useProgress();
 
@@ -222,13 +225,18 @@ const StudentHome = () => {
       setHomeworkSummary({ total: hwList.length, pending, percent });
 
       // Continue Learning
-      const latestProgress = progressRes.data?.filter(p => !p.completed && p.percentCompleted > 0)
+      const latestProgress = progressRes.data?.filter(p => !p.completed && p.watchTime > 0)
         .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0];
       
       if (latestProgress?.Content) {
+        const durationSeconds = (latestProgress.Content.duration || 0) * 60;
+        const calculatedPercent = durationSeconds > 0 
+          ? Math.min(100, Math.round((latestProgress.watchTime / durationSeconds) * 100))
+          : 0;
+
         setContinueVideo({
           ...latestProgress.Content,
-          percent: latestProgress.percentCompleted
+          percent: calculatedPercent
         });
       }
 
@@ -286,7 +294,7 @@ const StudentHome = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4, position: 'relative' }}>
+    <Box sx={{ py: 4, px: 1, position: 'relative' }}>
       {/* Search Header */}
       <Paper sx={{ 
         p: { xs: 3, md: 4 }, 
@@ -302,16 +310,16 @@ const StudentHome = () => {
           <School sx={{ fontSize: 200 }} />
         </Box>
         <Grid container spacing={4} alignItems="center">
-          <Grid item xs={12} md={7}>
-            <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.75rem', md: '3rem' } }}>
               Hi, {user?.name?.split(' ')[0]}! 👋
             </Typography>
-            <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
+            <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, fontSize: { xs: '1rem', md: '1.25rem' } }}>
               What would you like to learn today?
             </Typography>
             
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <FormControl sx={{ minWidth: 250, bgcolor: 'white', borderRadius: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: { xs: 'column', sm: 'row' } }}>
+              <FormControl sx={{ width: { xs: '100%', sm: 250 }, bgcolor: 'white', borderRadius: 2 }}>
                 <InputLabel id="subject-search-label">Search for a Subject</InputLabel>
                 <Select
                   labelId="subject-search-label"
@@ -329,6 +337,7 @@ const StudentHome = () => {
               <Button 
                 variant="contained" 
                 size="large"
+                fullWidth={isMobile}
                 sx={{ 
                   bgcolor: 'warning.main', 
                   color: 'white', 
@@ -357,12 +366,12 @@ const StudentHome = () => {
             ) : (
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 {topics.length > 0 ? topics.map(topic => (
-                  <Grid item xs={6} sm={4} md={3} key={topic.id}>
+                  <Grid size={{ xs: 6, sm: 4, md: 3 }} key={topic.id}>
                     <Button
                       fullWidth
                       variant="outlined"
                       sx={{ 
-                        p: 2, 
+                        p: { xs: 1.5, sm: 2 }, 
                         borderRadius: 3, 
                         borderWidth: 2, 
                         textAlign: 'left', 
@@ -375,7 +384,7 @@ const StudentHome = () => {
                       }}
                       onClick={() => navigate(`/study/topic/${topic.id}`)}
                     >
-                      <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'text.primary' }}>{topic.title}</Typography>
+                      <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'text.primary', fontSize: { xs: '0.85rem', sm: '1rem' } }}>{topic.title}</Typography>
                       <Typography variant="caption" color="textSecondary">{topic.Contents?.length || 0} Lessons</Typography>
                     </Button>
                   </Grid>
@@ -390,7 +399,7 @@ const StudentHome = () => {
 
       <Grid container spacing={4}>
         {/* Left Section: Continue & Recent */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           {/* Continue Learning */}
           {continueVideo && (
             <Box sx={{ mb: 6 }}>
@@ -409,10 +418,10 @@ const StudentHome = () => {
               }}>
                 <CardMedia
                   component="img"
-                  sx={{ width: { xs: '100%', sm: 260 }, height: 180 }}
+                  sx={{ width: { xs: '100%', sm: 260 }, height: { xs: 180, sm: 180 } }}
                   image={resolveMediaUrl(continueVideo.thumbnail) || 'https://via.placeholder.com/260x180'}
                 />
-                <CardContent sx={{ flex: 1, p: 3 }}>
+                <CardContent sx={{ flex: 1, p: { xs: 2, sm: 3 } }}>
                   <Typography variant="overline" color="secondary" fontWeight="bold">RESUME</Typography>
                   <Typography variant="h6" fontWeight="bold">{continueVideo.title}</Typography>
                   <Box sx={{ mt: 2, mb: 1 }}>
@@ -451,7 +460,7 @@ const StudentHome = () => {
             </Box>
             <Grid container spacing={2}>
               {classVideos.slice(0, 4).map(video => (
-                <Grid item xs={12} sm={6} key={video.id}>
+                <Grid size={{ xs: 12, sm: 6 }} key={video.id}>
                   <VideoCard video={video} onWatch={(id) => navigate(`/play/video/${id}`)} />
                 </Grid>
               ))}
@@ -460,13 +469,13 @@ const StudentHome = () => {
         </Grid>
 
         {/* Right Section: Progress Summary & Subjects */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Box sx={{ mb: 4 }}>
             <Typography variant="h5" fontWeight="bold" gutterBottom display="flex" alignItems="center" gap={1}>
               <AutoGraph color="success" /> My Stats
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <StatCard 
                   title="Overall Learning" 
                   value={`${getGradeProgress(user?.grade)}%`} 
@@ -475,7 +484,7 @@ const StudentHome = () => {
                   percent={getGradeProgress(user?.grade)}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <StatCard 
                   title="Homework Status" 
                   value={`${homeworkSummary.pending} Pending`} 
@@ -484,7 +493,7 @@ const StudentHome = () => {
                   percent={homeworkSummary.percent}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <StatCard 
                   title="Watch Time" 
                   value={formatWatchTime(watchTimeStats?.totalWatchTime || 0)} 
@@ -501,7 +510,7 @@ const StudentHome = () => {
             </Typography>
             <Grid container spacing={2}>
               {subjects.slice(0, 4).map((subject, index) => (
-                <Grid item xs={6} key={subject.id}>
+                <Grid size={{ xs: 6 }} key={subject.id}>
                   <SubjectCard 
                     subject={subject} 
                     color={getSubjectColor(index)} 
@@ -514,7 +523,7 @@ const StudentHome = () => {
           </Box>
         </Grid>
       </Grid>
-    </Container>
+    </Box>
   );
 };
 

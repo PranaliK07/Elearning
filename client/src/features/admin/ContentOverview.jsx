@@ -101,8 +101,8 @@ const ContentOverview = () => {
 
   return (
     <Container maxWidth="lg">
-      <Paper sx={{ p: 3, borderRadius: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
             <ContentOverviewIcon color="primary" />
             <Typography variant="h6">Content Management</Typography>
@@ -111,6 +111,7 @@ const ContentOverview = () => {
             variant="contained"
             startIcon={<Add />}
             onClick={() => navigate('/content/create')}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Add Content
           </Button>
@@ -121,8 +122,8 @@ const ContentOverview = () => {
             <CircularProgress />
           </Box>
         ) : (
-          <TableContainer>
-            <Table>
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 700 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Title</TableCell>
@@ -228,7 +229,7 @@ const ContentOverview = () => {
               Content Summary
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6} sm={2.4}>
+              <Grid size={{ xs: 6, sm: 2.4 }}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.type === 'video' || c.contentType === 'video').length}</Typography>
@@ -236,7 +237,7 @@ const ContentOverview = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={6} sm={2.4}>
+              <Grid size={{ xs: 6, sm: 2.4 }}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.type === 'quiz' || c.contentType === 'quiz').length}</Typography>
@@ -244,7 +245,7 @@ const ContentOverview = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={6} sm={2.4}>
+              <Grid size={{ xs: 6, sm: 2.4 }}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.type === 'assignment' || c.contentType === 'assignment').length}</Typography>
@@ -252,7 +253,7 @@ const ContentOverview = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={6} sm={2.4}>
+              <Grid size={{ xs: 6, sm: 2.4 }}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.type === 'reading' || c.contentType === 'reading').length}</Typography>
@@ -260,7 +261,7 @@ const ContentOverview = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={6} sm={2.4}>
+              <Grid size={{ xs: 6, sm: 2.4 }}>
                 <Card variant="outlined">
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">{content.filter((c) => c.status === 'published').length}</Typography>

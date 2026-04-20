@@ -17,7 +17,11 @@ import {
   ButtonGroup,
   Menu,
   MenuItem,
+  useTheme,
+  useMediaQuery,
+  Divider,
 } from '@mui/material';
+import Stack from '@mui/material/Stack';
 import {
   GetApp,
   People,
@@ -72,6 +76,9 @@ const Reports = () => {
   });
   const [loading, setLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const open = Boolean(anchorEl);
 
   const handleExportClick = (event) => {
@@ -304,84 +311,92 @@ const Reports = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1.5, sm: 3 } }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'flex-start', sm: 'center' }, 
+        flexDirection: { xs: 'column', sm: 'row' }, 
+        gap: 3, 
+        mb: 4 
+      }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            Learning Analytics Reports
+          <Typography variant={isMobile ? "h4" : "h3"} fontWeight="900" gutterBottom sx={{ 
+            background: 'linear-gradient(45deg, #1A237E 30%, #3F51B5 90%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
+            Learning Analytics 📊
           </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Insights and performance tracking for your classes
+          <Typography variant="body1" color="textSecondary" sx={{ fontWeight: 500 }}>
+            Real-time insights and performance tracking
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
-          <ButtonGroup variant="outlined" size="small">
-            <Button variant={period === 'daily' ? 'contained' : 'outlined'} onClick={() => setPeriod('daily')} disabled={loading}>
-              Daily
-            </Button>
-            <Button variant={period === 'weekly' ? 'contained' : 'outlined'} onClick={() => setPeriod('weekly')} disabled={loading}>
-              Weekly
-            </Button>
-            <Button variant={period === 'monthly' ? 'contained' : 'outlined'} onClick={() => setPeriod('monthly')} disabled={loading}>
-              Monthly
-            </Button>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+          <ButtonGroup variant="outlined" size="large" fullWidth={isMobile} sx={{ bgcolor: 'white', borderRadius: 2, overflow: 'hidden' }}>
+            <Button variant={period === 'daily' ? 'contained' : 'outlined'} onClick={() => setPeriod('daily')} disabled={loading}>Daily</Button>
+            <Button variant={period === 'weekly' ? 'contained' : 'outlined'} onClick={() => setPeriod('weekly')} disabled={loading}>Weekly</Button>
+            <Button variant={period === 'monthly' ? 'contained' : 'outlined'} onClick={() => setPeriod('monthly')} disabled={loading}>Monthly</Button>
           </ButtonGroup>
           <Button 
-            variant="outlined" 
+            variant="contained" 
             startIcon={<GetApp />} 
             endIcon={<ExpandMore />}
             onClick={handleExportClick}
+            fullWidth={isMobile}
+            sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: 'bold' }}
           >
-            Export Report
+            Export
           </Button>
           <Menu
             anchorEl={anchorEl}
             open={open}
             onClose={handleExportClose}
+            PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 180, boxShadow: 4 } }}
           >
-            <MenuItem onClick={exportCSV}>Export as CSV</MenuItem>
-            <MenuItem onClick={exportExcel}>Export as Excel</MenuItem>
-            <MenuItem onClick={exportPDF}>Export as PDF</MenuItem>
-            <MenuItem onClick={exportWord}>Export as Word</MenuItem>
+            <MenuItem onClick={exportCSV}>Export CSV</MenuItem>
+            <MenuItem onClick={exportExcel}>Export Excel</MenuItem>
+            <MenuItem onClick={exportPDF}>Export PDF</MenuItem>
+            <MenuItem onClick={exportWord}>Export Word</MenuItem>
           </Menu>
-        </Box>
+        </Stack>
       </Box>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card sx={{ bgcolor: 'primary.light', color: 'primary.contrastText', borderRadius: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <EmojiEvents fontSize="large" />
                 <Box>
-                  <Typography variant="subtitle2">{selectedSummary[0]?.label || 'Metric 1'}</Typography>
-                  <Typography variant="h4">{selectedSummary[0]?.value ?? 0}</Typography>
+                  <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>{selectedSummary[0]?.label || 'Metric 1'}</Typography>
+                  <Typography variant="h4" fontWeight="bold">{selectedSummary[0]?.value ?? 0}</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'secondary.light', color: 'secondary.contrastText' }}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card sx={{ bgcolor: 'secondary.light', color: 'secondary.contrastText', borderRadius: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Assignment fontSize="large" />
                 <Box>
-                  <Typography variant="subtitle2">{selectedSummary[1]?.label || 'Metric 2'}</Typography>
-                  <Typography variant="h4">{selectedSummary[1]?.value ?? 0}</Typography>
+                  <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>{selectedSummary[1]?.label || 'Metric 2'}</Typography>
+                  <Typography variant="h4" fontWeight="bold">{selectedSummary[1]?.value ?? 0}</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'success.light', color: 'white' }}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card sx={{ bgcolor: 'success.light', color: 'white', borderRadius: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <People fontSize="large" />
                 <Box>
-                  <Typography variant="subtitle2">{selectedSummary[2]?.label || 'Metric 3'}</Typography>
-                  <Typography variant="h4">{selectedSummary[2]?.value ?? 0}</Typography>
+                  <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>{selectedSummary[2]?.label || 'Metric 3'}</Typography>
+                  <Typography variant="h4" fontWeight="bold">{selectedSummary[2]?.value ?? 0}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -389,72 +404,140 @@ const Reports = () => {
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 3 }}>
-        <Typography variant="body2" color="textSecondary">
-          {[
-            ...selectedSummary.slice(3).map((item) => `${item.label}: ${item.value}`),
-            reportData.classPerformance.length
-              ? `Top Class: ${reportData.classPerformance[0].className} (${reportData.classPerformance[0].avgScore}% score, ${reportData.classPerformance[0].assignmentCompletion}% assignment completion)`
-              : null
-          ].filter(Boolean).join(' | ') || `Average Score: ${reportData.performanceMetrics.avgScore}% | Completion Rate: ${reportData.performanceMetrics.completionRate} | Assignment Completion: ${reportData.performanceMetrics.assignmentCompletionRate || '0%'} | Total Learning Hours: ${reportData.performanceMetrics.totalHours}h`}
-        </Typography>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: 4, bgcolor: 'background.paper', boxShadow: 1, border: '1px solid', borderColor: 'divider' }}>
+        <Grid container spacing={2}>
+          {selectedSummary.slice(3).map((item) => (
+            <Grid item xs={6} sm={4} md={2} key={item.label}>
+              <Typography variant="caption" color="textSecondary" display="block" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
+                {item.label}
+              </Typography>
+              <Typography variant="body1" fontWeight="bold">
+                {item.value}
+              </Typography>
+            </Grid>
+          ))}
+          {reportData.classPerformance.length > 0 && (
+            <Grid item xs={12} sm={4} md={3}>
+              <Typography variant="caption" color="primary" display="block" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
+                Top Performing Class
+              </Typography>
+              <Typography variant="body1" fontWeight="bold" color="primary.main">
+                {reportData.classPerformance[0].className} ({reportData.classPerformance[0].avgScore}%)
+              </Typography>
+            </Grid>
+          )}
+          {!selectedSummary.slice(3).length && !reportData.classPerformance.length && (
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                <Box>
+                  <Typography variant="caption" color="textSecondary" display="block">AVG SCORE</Typography>
+                  <Typography variant="h6" fontWeight="bold">{reportData.performanceMetrics.avgScore}%</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="textSecondary" display="block">COMPLETION</Typography>
+                  <Typography variant="h6" fontWeight="bold">{reportData.performanceMetrics.completionRate}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="textSecondary" display="block">TOTAL HOURS</Typography>
+                  <Typography variant="h6" fontWeight="bold">{reportData.performanceMetrics.totalHours}h</Typography>
+                </Box>
+              </Box>
+            </Grid>
+          )}
+        </Grid>
       </Paper>
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 3, borderRadius: 3 }}>
+          <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
             <Typography variant="h6" gutterBottom>Student Performance</Typography>
-            <Box sx={{ height: 300 }}>
+            <Box sx={{ height: { xs: 220, sm: 300 } }}>
               <Bar data={barData} options={{ maintainAspectRatio: false }} />
             </Box>
           </Paper>
         </Grid>
         <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 3, borderRadius: 3 }}>
+          <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 3 }}>
             <Typography variant="h6" gutterBottom>{period === 'monthly' ? 'Monthly Student Activity' : period === 'daily' ? 'Daily Student Activity' : 'Weekly Student Activity'}</Typography>
-            <Box sx={{ height: 300 }}>
+            <Box sx={{ height: { xs: 220, sm: 300 } }}>
               <Line data={lineData} options={{ maintainAspectRatio: false }} />
             </Box>
           </Paper>
         </Grid>
       </Grid>
 
-      <Paper sx={{ mt: 4, borderRadius: 3, overflow: 'hidden' }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Student Name</TableCell>
-                <TableCell align="center">Class</TableCell>
-                <TableCell align="center">Quiz Performance</TableCell>
-                <TableCell align="center">Lessons Completed</TableCell>
-                <TableCell align="center">Assignment Completion</TableCell>
-                <TableCell align="center">Last Active</TableCell>
-                <TableCell align="right">Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {reportData.studentProgress.map((row) => (
-                <TableRow key={row.name}>
-                  <TableCell component="th" scope="row">
-                    {row.name}
-                  </TableCell>
-                  <TableCell align="center">{row.className || 'Unassigned'}</TableCell>
-                  <TableCell align="center">{row.score}%</TableCell>
-                  <TableCell align="center">{row.progress}%</TableCell>
-                  <TableCell align="center">{row.assignmentCompletion ?? 0}%</TableCell>
-                  <TableCell align="center">{row.lastActive ? new Date(row.lastActive).toLocaleDateString() : 'N/A'}</TableCell>
-                  <TableCell align="right">
-                    <Typography color={row.score > 80 ? 'success.main' : 'warning.main'} fontWeight="bold">
+      <Typography variant="h5" fontWeight="bold" sx={{ mt: 6, mb: 3 }}>Detailed Student Performance</Typography>
+      
+      {isMobile ? (
+        <Stack spacing={2} sx={{ mb: 4 }}>
+          {reportData.studentProgress.map((row) => (
+            <Card key={row.name} sx={{ borderRadius: 3, border: '1px solid #eee' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6" fontWeight="bold">{row.name}</Typography>
+                  <Typography color="primary" variant="subtitle2" fontWeight="bold">{row.className || 'N/A'}</Typography>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="textSecondary">Quiz Match</Typography>
+                    <Typography variant="body2" fontWeight="bold">{row.score}%</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="textSecondary">Success Rate</Typography>
+                    <Typography variant="body2" fontWeight="bold">{row.progress}%</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="textSecondary">Last Active</Typography>
+                    <Typography variant="body2">{row.lastActive ? new Date(row.lastActive).toLocaleDateString() : 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="textSecondary">Status</Typography>
+                    <Typography variant="body2" color={row.score > 80 ? 'success.main' : 'warning.main'} fontWeight="bold">
                       {row.score > 80 ? 'Excellent' : 'On Track'}
                     </Typography>
-                  </TableCell>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
+      ) : (
+        <Paper sx={{ mt: 4, borderRadius: 3, overflow: 'hidden' }}>
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Student Name</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>Class</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>Quiz Performance</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>Lessons Completed</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>Assignment Completion</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>Last Active</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Status</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {reportData.studentProgress.map((row) => (
+                  <TableRow key={row.name} hover>
+                    <TableCell component="th" scope="row">{row.name}</TableCell>
+                    <TableCell align="center">{row.className || 'Unassigned'}</TableCell>
+                    <TableCell align="center">{row.score}%</TableCell>
+                    <TableCell align="center">{row.progress}%</TableCell>
+                    <TableCell align="center">{row.assignmentCompletion ?? 0}%</TableCell>
+                    <TableCell align="center">{row.lastActive ? new Date(row.lastActive).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell align="right">
+                      <Typography color={row.score > 80 ? 'success.main' : 'warning.main'} fontWeight="bold">
+                        {row.score > 80 ? 'Excellent' : 'On Track'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
     </Container>
   );
 };

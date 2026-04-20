@@ -116,7 +116,7 @@ const TopicContent = () => {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ px: 1 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)}>
@@ -150,7 +150,7 @@ const TopicContent = () => {
         {tab === 0 && (
           <Grid container spacing={3}>
             {videos.length === 0 && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ p: 3, textAlign: 'center', bgcolor: 'background.paper', borderRadius: 3 }}>
                   <Typography color="textSecondary">No videos for this topic yet.</Typography>
                 </Box>
@@ -162,7 +162,7 @@ const TopicContent = () => {
               );
               const thumbSrc = normalizeMediaUrl(video.thumbnail || video.thumb || '');
               return (
-              <Grid item xs={12} sm={6} md={4} key={video.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={video.id}>
                 <Card sx={{ borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                   {thumbSrc ? (
                     <CardMedia
@@ -214,14 +214,14 @@ const TopicContent = () => {
         {tab === 1 && (
           <Grid container spacing={3}>
             {quizzes.length === 0 && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ p: 3, textAlign: 'center', bgcolor: 'background.paper', borderRadius: 3 }}>
                   <Typography color="textSecondary">No quizzes for this topic yet.</Typography>
                 </Box>
               </Grid>
             )}
             {quizzes.map((quiz) => (
-              <Grid item xs={12} sm={6} md={4} key={quiz.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={quiz.id}>
                 <Card sx={{ 
                   borderRadius: 4, 
                   height: '100%', 
@@ -300,14 +300,14 @@ const TopicContent = () => {
         {tab === 2 && (
           <Grid container spacing={3}>
             {homework.length === 0 && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ p: 3, textAlign: 'center', bgcolor: 'background.paper', borderRadius: 3 }}>
                   <Typography color="textSecondary">No homework for this topic yet.</Typography>
                 </Box>
               </Grid>
             )}
             {homework.map((item) => (
-              <Grid item xs={12} sm={6} md={4} key={item.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.id}>
                 <Card sx={{ borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <Box sx={{ height: 140, bgcolor: 'success.light', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Assignment sx={{ fontSize: 56, color: 'white' }} />
@@ -336,7 +336,7 @@ const TopicContent = () => {
           </Grid>
         )}
       </motion.div>
-    </Container>
+    </Box>
   );
 };
 

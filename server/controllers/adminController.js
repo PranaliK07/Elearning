@@ -36,6 +36,60 @@ const defaultRoleAccess = {
 
 const ROLE_ACCESS_VERSION = 13;
 
+const normalizeTargetGrades = (value) => {
+  if (Array.isArray(value)) return value.map(Number).filter(Number.isFinite);
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.map(Number).filter(Number.isFinite) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+  return [];
+};
+
+const buildAnnouncementRecipientWhere = (targetRole, targetGrades) => {
+  const where = {
+    isActive: true,
+    isDeleted: false
+  };
+
+  if (targetRole === 'students') {
+    where.role = 'student';
+  } else if (targetRole === 'teachers') {
+    where.role = 'teacher';
+  } else if (targetRole === 'admins') {
+    where.role = 'admin';
+  } else {
+    where.role = { [Op.in]: ['student', 'teacher', 'admin'] };
+  }
+
+  if (targetGrades.length && (targetRole === 'students' || targetRole === 'all')) {
+    const gradeFilter = { [Op.in]: targetGrades };
+
+    if (targetRole === 'students') {
+      where[Op.or] = [
+        { GradeId: gradeFilter },
+        { grade: gradeFilter }
+      ];
+    } else {
+      where[Op.or] = [
+        { role: { [Op.in]: ['teacher', 'admin'] } },
+        {
+          role: 'student',
+          [Op.or]: [
+            { GradeId: gradeFilter },
+            { grade: gradeFilter }
+          ]
+        }
+      ];
+    }
+  }
+
+  return where;
+};
+
 // --- Business settings: role-based sidebar access ---
 const getRoleAccess = async (req, res) => {
   try {
@@ -537,16 +591,45 @@ const manageContent = async (req, res) => {
 const createAnnouncement = async (req, res) => {
   try {
     const { title, content, priority, targetRole, targetGrades, expiresAt } = req.body;
+    const normalizedTargetRole = targetRole || 'all';
+    const normalizedTargetGrades = normalizeTargetGrades(targetGrades);
 
     const announcement = await Announcement.create({
       title,
       content,
       priority,
-      targetRole,
-      targetGrades,
+      targetRole: normalizedTargetRole,
+      targetGrades: normalizedTargetGrades,
       expiresAt,
       authorId: req.user.id
     });
+
+    try {
+      const recipients = await User.findAll({
+        where: buildAnnouncementRecipientWhere(normalizedTargetRole, normalizedTargetGrades),
+        attributes: ['id']
+      });
+
+      if (recipients.length) {
+        await Notification.bulkCreate(
+          recipients.map((user) => ({
+            userId: user.id,
+            senderId: req.user.id,
+            type: 'announcement',
+            title: announcement.title,
+            message: announcement.content,
+            data: {
+              announcementId: announcement.id,
+              priority: announcement.priority,
+              targetRole: announcement.targetRole,
+              targetGrades: announcement.targetGrades
+            }
+          }))
+        );
+      }
+    } catch (notifErr) {
+      console.error('Admin announcement notification error:', notifErr);
+    }
 
     res.status(201).json({
       success: true,

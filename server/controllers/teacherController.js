@@ -1,5 +1,6 @@
-const { User, Progress, Content, Assignment, Submission, Grade, Announcement, Notification, ClassCommunication } = require('../models');
+const { User, Progress, Content, Assignment, Submission, Grade, Announcement, Notification, ClassCommunication, Subject } = require('../models');
 const { Op } = require('sequelize');
+const { createNotification, notifyMultipleUsers } = require('../utils/notifications');
 const { sendSmsAndWhatsappToRecipients, normalizePhone } = require('../utils/parentMessaging');
 
 const getMyClasses = async (req, res) => {
@@ -69,6 +70,35 @@ const createAssignment = async (req, res) => {
       teacherId: req.user.id
     });
 
+    // Notify students in this grade about the new assignment
+    try {
+      const studentWhere = { role: 'student', isActive: true, isDeleted: false };
+      if (gradeId) {
+        studentWhere.GradeId = gradeId;
+      }
+      
+      const students = await User.findAll({
+        where: studentWhere,
+        attributes: ['id']
+      });
+      
+      if (students.length > 0) {
+        const studentIds = students.map(s => s.id);
+        const subject = subjectId ? await Subject.findByPk(subjectId) : null;
+        const subjectName = subject ? subject.name : 'your class';
+        
+        await notifyMultipleUsers(
+          studentIds,
+          'reminder',
+          'New Home Work Assigned 📚',
+          `A new assignment "${title}" has been posted for ${subjectName}. Due date: ${new Date(dueDate).toLocaleDateString()}`,
+          { assignmentId: assignment.id }
+        );
+      }
+    } catch (notifErr) {
+      console.error('Create assignment notification error:', notifErr);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Assignment created successfully',
@@ -94,6 +124,20 @@ const gradeAssignment = async (req, res) => {
     submission.feedback = feedback;
     submission.status = 'graded';
     await submission.save();
+
+    // Notify student that their work has been graded
+    try {
+      const assignment = await Assignment.findByPk(submission.assignmentId);
+      await createNotification(
+        submission.studentId,
+        'quiz_result',
+        'Assignment Graded! 📝',
+        `Your work for "${assignment?.title || 'Assignment'}" has been graded. Grade: ${grade}`,
+        { submissionId: submission.id, assignmentId: submission.assignmentId }
+      );
+    } catch (notifErr) {
+      console.error('Grade assignment notification error:', notifErr);
+    }
 
     res.json({
       success: true,

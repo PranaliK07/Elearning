@@ -300,7 +300,7 @@ const Register = () => {
   };
 
   return (
-    <Container component="main" maxWidth="sm">
+    <Container component="main" maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -308,8 +308,8 @@ const Register = () => {
       >
         <Box
           sx={{
-            marginTop: 4,
-            marginBottom: 4,
+            marginTop: { xs: 2, sm: 4 },
+            marginBottom: { xs: 2, sm: 4 },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -318,7 +318,7 @@ const Register = () => {
           <Paper
             elevation={3}
             sx={{
-              padding: 4,
+              padding: { xs: 2.5, sm: 4 },
               width: '100%',
               borderRadius: 4
             }}
@@ -346,7 +346,7 @@ const Register = () => {
               Create your account and start learning
             </Typography>
 
-            <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+            <Stepper activeStep={activeStep} sx={{ mb: 4 }} alternativeLabel>
               {steps.map((label) => (
                 <Step key={label}>
                   <StepLabel>{label}</StepLabel>

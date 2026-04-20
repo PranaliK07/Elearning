@@ -69,7 +69,7 @@ const StudentDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
-  const { watchTimeStats, getGradeProgress, updateWatchTime, getQuizStats } = useProgress();
+  const { watchTimeStats, getGradeProgress, updateWatchTime, updateProgress, getQuizStats } = useProgress();
   
   // State
   const [achievements, setAchievements] = useState([]);
@@ -123,6 +123,8 @@ const StudentDashboard = () => {
   const swipeCooldownRef = useRef(0);
   const inlineWatchAccumulatorRef = useRef(0);
   const inlineLastTimeRef = useRef(0);
+  const fullWatchAccumulatorRef = useRef(0);
+  const fullLastTimeRef = useRef(0);
   
   // Constants
   const SWIPE_THRESHOLD = 60;
@@ -182,6 +184,8 @@ const StudentDashboard = () => {
   useEffect(() => {
     inlineWatchAccumulatorRef.current = 0;
     inlineLastTimeRef.current = 0;
+    fullWatchAccumulatorRef.current = 0;
+    fullLastTimeRef.current = 0;
   }, [openPlayer]);
 
   // Handle fullscreen video events - IMPROVED VERSION
@@ -190,21 +194,31 @@ const StudentDashboard = () => {
       const video = fullVideoRef.current;
       
       const handleTimeUpdate = () => {
-        setCurrentTime(video.currentTime);
+        const videoTime = video.currentTime;
+        setCurrentTime(videoTime);
         
-        // Update progress every 5 seconds
-        if (Math.floor(video.currentTime) % 5 === 0) {
-          if (selectedVideo?.id) {
-            updateWatchTime(selectedVideo.id, 5);
+        // Update progress using accumulator for "real" watch time
+        const delta = videoTime - (fullLastTimeRef.current || 0);
+        fullLastTimeRef.current = videoTime;
+        
+        // Only count forward progress and ignore jumps > 3s (seeks)
+        if (delta > 0 && delta < 3) {
+          fullWatchAccumulatorRef.current += delta;
+          if (fullWatchAccumulatorRef.current >= 5) {
+            const sendSeconds = Math.floor(fullWatchAccumulatorRef.current);
+            fullWatchAccumulatorRef.current -= sendSeconds;
+            if (selectedVideo?.id) {
+              updateWatchTime(selectedVideo.id, sendSeconds);
+            }
           }
-          
-          // Store video progress
-          if (selectedVideo?.id && video.duration) {
-            setVideoProgress(prev => ({
-              ...prev,
-              [selectedVideo.id]: video.currentTime
-            }));
-          }
+        }
+        
+        // Store video progress regularly
+        if (selectedVideo?.id && video.duration && Math.floor(videoTime) % 10 === 0) {
+          setVideoProgress(prev => ({
+            ...prev,
+            [selectedVideo.id]: videoTime
+          }));
         }
       };
 
@@ -254,6 +268,11 @@ const StudentDashboard = () => {
         setVideoEnded(true);
         setIsPlaying(false);
         
+        // Mark as completed in progress tracking
+        if (selectedVideo?.id) {
+          updateProgress(selectedVideo.id, { completed: true });
+        }
+
         // Check for available quiz
         const hasQuiz = availableQuizzes.some(q => q.videoId === selectedVideo?.id);
         if (hasQuiz) {
@@ -1398,7 +1417,7 @@ const StudentDashboard = () => {
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
-              bgcolor: 'rgba(255,255,255,0.06)', 
+              bgcolor: 'rgba(26, 35, 126, 0.2)', // Light Navy background
               borderRadius: 4, 
               p: 1.5,
               border: '1px solid rgba(255,255,255,0.1)',
@@ -1421,14 +1440,14 @@ const StudentDashboard = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      bgcolor: goal.completed ? alpha('#FFD93D', 0.25) : 'rgba(255,255,255,0.08)',
+                      bgcolor: goal.completed ? '#B0125B' : 'rgba(255,255,255,0.08)',
                       mb: 0.5,
                       mx: 'auto',
                       border: goal.completed ? '2px solid #FFD93D' : '1px dashed rgba(255,255,255,0.3)',
                       transition: 'all 0.4s ease'
                     }}>
                       {goal.completed ? (
-                        <Star sx={{ color: '#FFD93D', fontSize: 20 }} />
+                        <Star sx={{ color: '#FFD93D', fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(255,217,61,0.5))' }} />
                       ) : (
                         <Typography sx={{ fontSize: 18, opacity: 0.6 }}>{goal.icon}</Typography>
                       )}
@@ -1437,13 +1456,13 @@ const StudentDashboard = () => {
                   <Typography variant="caption" sx={{ 
                     color: goal.completed ? '#FFD93D' : 'rgba(255,255,255,0.5)', 
                     fontSize: '0.45rem', 
-                    fontWeight: 800,
+                    fontWeight: 900,
                     letterSpacing: 0,
                     display: 'block',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden'
                   }}>
-                    {goal.id.toUpperCase()}
+                    {goal.label || goal.id.toUpperCase()}
                   </Typography>
                 </Box>
               ))}

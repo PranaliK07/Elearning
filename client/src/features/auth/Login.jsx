@@ -81,7 +81,7 @@ const Login = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="xs" sx={{ px: { xs: 2, sm: 3 } }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -89,7 +89,7 @@ const Login = () => {
       >
         <Box
           sx={{
-            marginTop: 8,
+            marginTop: { xs: 4, sm: 8 },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -98,7 +98,7 @@ const Login = () => {
           <Paper
             elevation={3}
             sx={{
-              padding: 4,
+              padding: { xs: 3, sm: 4 },
               width: '100%',
               borderRadius: 4
             }}

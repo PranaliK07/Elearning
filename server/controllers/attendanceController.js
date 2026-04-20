@@ -1,4 +1,4 @@
-const { Attendance, Grade, User, sequelize } = require('../models');
+const { Attendance, Grade, Notification, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 const normalizeDateOnly = (value) => {
@@ -193,6 +193,44 @@ const markGradeAttendance = async (req, res) => {
     }
 
     await transaction.commit();
+
+    try {
+      const formattedDate = new Date(`${date}T00:00:00.000Z`).toLocaleDateString();
+
+      if (saved.length) {
+        await Notification.bulkCreate(
+          saved.map((row) => ({
+            userId: row.studentId,
+            senderId: req.user.id,
+            type: 'reminder',
+            title: 'Attendance Updated',
+            message: `Your attendance for ${formattedDate} was marked as ${row.status}.`,
+            data: {
+              attendanceId: row.id,
+              date,
+              status: row.status,
+              gradeId: grade.id
+            }
+          }))
+        );
+      }
+
+      await Notification.create({
+        userId: req.user.id,
+        senderId: req.user.id,
+        type: 'announcement',
+        title: 'Attendance Saved',
+        message: `Attendance for ${grade.name} on ${formattedDate} was saved successfully.`,
+        data: {
+          date,
+          gradeId: grade.id,
+          savedCount: saved.length
+        }
+      });
+    } catch (notifErr) {
+      console.error('Attendance notification error:', notifErr);
+    }
+
     res.json({ success: true, date, grade: { id: grade.id, name: grade.name, level: grade.level }, savedCount: saved.length });
   } catch (error) {
     await transaction.rollback();

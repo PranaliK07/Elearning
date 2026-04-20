@@ -102,6 +102,11 @@ const deleteNotification = async (req, res) => {
 const getUnreadCount = async (req, res) => {
   try {
     const userId = req.user?.id;
+    console.log('[Notification DB Debug] Requesting unread count for User:', {
+      id: userId,
+      type: typeof userId
+    });
+    
     if (!userId) {
       return res.status(401).json({ message: 'User not identified' });
     }
@@ -114,6 +119,7 @@ const getUnreadCount = async (req, res) => {
       }
     });
 
+    console.log(`[Notification DB Debug] Result for User ${userId}: ${count}`);
     res.json({ count });
   } catch (error) {
     console.error('Get unread count error details:', {
@@ -140,7 +146,9 @@ const getNotificationSettings = async (req, res) => {
         quiz: true,
         comment: true,
         like: true,
-        announcement: true
+        announcement: true,
+        doubt: true,
+        assignment: true
       }
     };
 

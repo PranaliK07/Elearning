@@ -240,7 +240,7 @@ const LandingPage = () => {
         </Box>
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
           <Grid container spacing={4} alignItems="center" justifyContent="center">
-            <Grid item xs={12} md={9}>
+            <Grid size={{ xs: 12, md: 9 }}>
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -434,7 +434,7 @@ const LandingPage = () => {
             sx={{ overflowX: 'auto', pb: 1 }}
           >
             {featuresData.forStudents.map((feature, idx) => (
-              <Grid item xs={12} sm={6} md={4} lg={4} sx={{ minWidth: 280, display: 'flex' }} key={feature.title}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }} sx={{ minWidth: 280, display: 'flex' }} key={feature.title}>
                 <motion.div
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -518,7 +518,7 @@ const LandingPage = () => {
             sx={{ overflowX: 'auto', pb: 1 }}
           >
             {featuresData.forTeachers.map((feature, idx) => (
-              <Grid item xs={12} sm={6} md={4} lg={4} sx={{ minWidth: 280, display: 'flex' }} key={feature.title}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }} sx={{ minWidth: 280, display: 'flex' }} key={feature.title}>
                 <motion.div
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -601,7 +601,7 @@ const LandingPage = () => {
             sx={{ overflowX: 'auto', pb: 1 }}
           >
             {featuresData.forParents.map((feature, idx) => (
-              <Grid item xs={12} sm={6} md={4} lg={4} sx={{ minWidth: 280, display: 'flex' }} key={feature.title}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }} sx={{ minWidth: 280, display: 'flex' }} key={feature.title}>
                 <motion.div
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -682,7 +682,7 @@ const LandingPage = () => {
           </Box>
           <Grid container spacing={4} wrap="nowrap" sx={{ overflowX: 'auto', pb: 4, px: 1 }}>
             {dashboardShots.map((shot, idx) => (
-              <Grid item xs={12} sm={6} md={4} lg={4} sx={{ minWidth: { xs: 300, md: 360 }, display: 'flex' }} key={shot.title}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }} sx={{ minWidth: { xs: 300, md: 360 }, display: 'flex' }} key={shot.title}>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}

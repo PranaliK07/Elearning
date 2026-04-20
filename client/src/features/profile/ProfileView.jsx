@@ -121,12 +121,14 @@ const ProfileView = () => {
       ];
     }
 
-    const resolvedWatchTimeMinutes = quickStats?.watchTime ?? watchTimeStats?.totalWatchTime ?? user?.totalWatchTime ?? 0;
-    const watchTimeHours = Math.round(Number(resolvedWatchTimeMinutes || 0) / 60);
+    const totalSeconds = Number(quickStats?.watchTime ?? watchTimeStats?.totalWatchTime ?? user?.totalWatchTime ?? 0);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const watchTimeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
     return [
-      { label: 'Total Watch Time', value: `${watchTimeHours}h`, icon: <AccessTime /> },
-      { label: 'Daily Stars', value: dailyStars, icon: <Star sx={{ color: '#FFD93D' }} />, hollow: true },
+      { label: 'Total Watch Time', value: watchTimeStr, icon: <AccessTime /> },
+      { label: "Today's Stars", value: dailyStars, icon: <Star sx={{ color: '#FFD93D' }} />, hollow: true },
       { label: 'Achievements', value: quickStats?.achievements ?? (user?.Achievements?.length ?? user?.achievements?.length ?? 0), icon: <EmojiEvents /> },
       { label: 'Completed Lessons', value: quickStats?.completedLessons ?? 0, icon: <TrendingUp /> }
     ];
@@ -152,17 +154,17 @@ const ProfileView = () => {
         transition={{ duration: 0.5 }}
       >
         {/* Profile Header */}
-        <Paper sx={{ p: 4, borderRadius: 4, mb: 3 }}>
+        <Paper sx={{ p: { xs: 2.5, sm: 4 }, borderRadius: 4, mb: 3 }}>
           <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={3} sx={{ textAlign: 'center' }}>
+            <Grid size={{ xs: 12, md: 3 }} sx={{ textAlign: 'center' }}>
               <motion.div
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: 'spring', stiffness: 300 }}
               >
                 <Avatar
                   sx={{
-                    width: 150,
-                    height: 150,
+                    width: { xs: 100, sm: 150 },
+                    height: { xs: 100, sm: 150 },
                     mx: 'auto',
                     border: '4px solid',
                     borderColor: 'primary.main',
@@ -184,10 +186,10 @@ const ProfileView = () => {
               </Button>
             </Grid>
 
-            <Grid item xs={12} md={9}>
+            <Grid size={{ xs: 12, md: 9 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography variant="h3" gutterBottom>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="h3" gutterBottom sx={{ fontSize: { xs: '1.8rem', sm: '3rem' }, wordBreak: 'break-word' }}>
                     {user?.name}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
@@ -195,6 +197,7 @@ const ProfileView = () => {
                       icon={<Email />}
                       label={user?.email}
                       variant="outlined"
+                      sx={{ maxWidth: '100%' }}
                     />
                     <Chip
                       icon={<School />}
@@ -214,7 +217,7 @@ const ProfileView = () => {
                 {user?.role === 'teacher' ? 'Professional Educator at Kids Learn Platform' : 'Student at Kids Learn Platform'} • Learning since 2024
               </Typography>
 
-              <Box sx={{ display: 'flex', gap: 3, mt: 2 }}>
+              <Box sx={{ display: 'flex', gap: { xs: 2, sm: 3 }, mt: 2, flexWrap: 'wrap' }}>
                 <Box>
                   <Typography variant="h5" color="primary">
                     {user?.grade || '-'}
@@ -229,7 +232,7 @@ const ProfileView = () => {
                       {'⭐'.repeat(dailyStars) || '⭐'}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
-                      Daily Stars
+                      Today's Stars
                     </Typography>
                   </Box>
                 ) : (
@@ -244,7 +247,12 @@ const ProfileView = () => {
                 )}
                 <Box>
                   <Typography variant="h5" color="primary">
-                    {Math.round((watchTimeStats?.totalWatchTime || 0) / 60)}h
+                    {(() => {
+                      const totalSecs = Number(watchTimeStats?.totalWatchTime || 0);
+                      const hrs = Math.floor(totalSecs / 3600);
+                      const mins = Math.floor((totalSecs % 3600) / 60);
+                      return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+                    })()}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     Watch Time
@@ -260,7 +268,7 @@ const ProfileView = () => {
         {/* Stats Grid */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           {stats.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }} key={index}>
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 initial={{ opacity: 0, y: 20 }}
@@ -275,7 +283,7 @@ const ProfileView = () => {
                     {stat.value}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {stat.label}
+                    {stat.label === 'Daily Stars' ? "Today's Stars" : stat.label}
                   </Typography>
                 </Paper>
               </motion.div>

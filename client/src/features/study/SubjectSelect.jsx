@@ -58,9 +58,9 @@ const SubjectSelect = () => {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ py: 2, px: 1 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 4, textAlign: 'center' }}>
           <Typography variant="h4" component="h1" gutterBottom sx={{ fontFamily: '"Comic Neue", cursive', fontWeight: 'bold', color: 'primary.main' }}>
             {isStudent ? 'Pick a Subject' : `Class ${gradeId} Subjects`}
           </Typography>
@@ -69,7 +69,7 @@ const SubjectSelect = () => {
           </Typography>
         </Box>
 
-        <Grid container spacing={3}>
+        <Grid container spacing={3} justifyContent="center">
           {subjectData.map((subject, index) => (
             <Grid item xs={12} sm={6} md={4} key={subject.id}>
               <SubjectCard
@@ -82,7 +82,7 @@ const SubjectSelect = () => {
           ))}
         </Grid>
       </motion.div>
-    </Container>
+    </Box>
   );
 };
 

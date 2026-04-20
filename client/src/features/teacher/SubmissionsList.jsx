@@ -67,8 +67,8 @@ const SubmissionsList = () => {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
         <IconButton onClick={() => navigate(-1)}><ArrowBack /></IconButton>
-        <Box>
-          <Typography variant="h4" fontWeight="bold">
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.4rem', sm: '2rem' }, wordBreak: 'break-word' }}>
             Submissions: {assignment?.title || 'Loading...'}
           </Typography>
           <Typography variant="body1" color="textSecondary">
@@ -78,8 +78,8 @@ const SubmissionsList = () => {
       </Box>
 
       <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
-        <TableContainer>
-          <Table>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 650 }}>
             <TableHead sx={{ bgcolor: 'secondary.main' }}>
               <TableRow>
                 <TableCell sx={{ color: 'white' }}>Student</TableCell>

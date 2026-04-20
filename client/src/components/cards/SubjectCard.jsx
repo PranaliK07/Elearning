@@ -47,14 +47,14 @@ const SubjectCard = ({ subject, progress, onClick, index }) => {
       case 'english':
         return '#9AE3D7';
       case 'science':
-        return '#89CFF0';
+        return '#1a237e'; // Navy Blue
       case 'hindi':
         return '#B8E994';
       case 'environmental studies':
       case 'evs':
         return '#FFE08A';
       default:
-        return '#9BB5FF';
+        return '#B0125B'; // Dark Pink fallback
     }
   };
 

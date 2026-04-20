@@ -19,7 +19,10 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  alpha
+  alpha,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import {
   Send,
@@ -28,7 +31,9 @@ import {
   Pending,
   Person,
   ChatBubbleOutline,
-  School
+  School,
+  ExpandMore as ExpandMoreIcon,
+  ArrowBack
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/axios';
@@ -146,7 +151,8 @@ const DoubtSection = () => {
             background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            mb: 1
+            mb: 1,
+            fontSize: { xs: '2rem', sm: '3rem' }
           }}>
             Ask a Doubt 🙋‍♂️
           </Typography>
@@ -160,7 +166,7 @@ const DoubtSection = () => {
         <Grid container spacing={4}>
           {/* Action Column */}
           <Grid item xs={12} md={isStudent ? 4 : 0} sx={{ display: isStudent ? 'block' : 'none' }}>
-            <Paper sx={{ p: 3, borderRadius: 4, position: 'sticky', top: 20 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 4, position: { md: 'sticky' }, top: 20 }}>
               <Typography variant="h6" fontWeight="800" gutterBottom>
                 Send New Doubt
               </Typography>
@@ -219,7 +225,7 @@ const DoubtSection = () => {
 
           {/* List Column */}
           <Grid item xs={12} md={isStudent ? 8 : 12}>
-            <Typography variant="h5" fontWeight="800" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h5" fontWeight="800" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
               <ChatBubbleOutline color="primary" />
               {isStudent ? 'Your Previous Doubts' : 'Received Doubts'}
             </Typography>
@@ -230,7 +236,7 @@ const DoubtSection = () => {
                   <HelpOutline sx={{ fontSize: 60, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
                   <Typography variant="h6" color="textSecondary">No doubts found.</Typography>
                 </Paper>
-              ) : (
+              ) : isStudent ? (
                 doubts.map((doubt, i) => (
                   <motion.div
                     key={doubt.id}
@@ -238,61 +244,15 @@ const DoubtSection = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.1 }}
                   >
-                    <Card sx={{ 
-                      mb: 2, 
-                      borderRadius: 4, 
-                      borderLeft: `6px solid ${doubt.status === 'resolved' ? '#4caf50' : '#ff9800'}`,
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-                    }}>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'flex-start' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Avatar src={isStudent ? doubt.teacher?.avatar : doubt.student?.avatar}>
-                              <Person />
-                            </Avatar>
-                            <Box>
-                              <Typography variant="subtitle2" fontWeight="800">
-                                {isStudent ? `Teacher: ${doubt.teacher?.name}` : `Student: ${doubt.student?.name}`}
-                              </Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                Sent on {new Date(doubt.createdAt).toLocaleDateString()}
-                              </Typography>
-                            </Box>
-                          </Box>
-                          {getStatusChip(doubt.status)}
-                        </Box>
-
-                        <Box sx={{ bgcolor: alpha('#2196F3', 0.03), p: 2, borderRadius: 2, mb: 2 }}>
-                          <Typography variant="body1" fontWeight="500">
-                            <strong>Q:</strong> {doubt.question}
-                          </Typography>
-                        </Box>
-
-                        {doubt.answer ? (
-                          <Box sx={{ bgcolor: alpha('#4caf50', 0.05), p: 2, borderRadius: 2, border: '1px solid rgba(76, 175, 80, 0.1)' }}>
-                            <Typography variant="body1">
-                              <strong>A:</strong> {doubt.answer}
-                            </Typography>
-                          </Box>
-                        ) : !isStudent ? (
-                          <Button 
-                            variant="outlined" 
-                            size="small" 
-                            onClick={() => handleOpenResponse(doubt)}
-                            startIcon={<Send />}
-                            sx={{ mt: 1, borderRadius: 2 }}
-                          >
-                            Respond to Student
-                          </Button>
-                        ) : (
-                          <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
-                            Waiting for teacher to respond...
-                          </Typography>
-                        )}
-                      </CardContent>
-                    </Card>
+                    <DoubtCard doubt={doubt} isStudent={isStudent} handleOpenResponse={handleOpenResponse} getStatusChip={getStatusChip} />
                   </motion.div>
                 ))
+              ) : (
+                <TeacherDoubtsView 
+                  doubts={doubts} 
+                  handleOpenResponse={handleOpenResponse} 
+                  getStatusChip={getStatusChip} 
+                />
               )}
             </AnimatePresence>
           </Grid>
@@ -338,6 +298,199 @@ const DoubtSection = () => {
         </DialogActions>
       </Dialog>
     </Container>
+  );
+};
+
+const DoubtCard = ({ doubt, isStudent, handleOpenResponse, getStatusChip }) => (
+  <Card sx={{ 
+    mb: 2, 
+    borderRadius: 4, 
+    borderLeft: `6px solid ${doubt.status === 'resolved' ? '#4caf50' : '#ff9800'}`,
+    boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+  }}>
+    <CardContent>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'flex-start' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar src={isStudent ? doubt.teacher?.avatar : doubt.student?.avatar}>
+            <Person />
+          </Avatar>
+          <Box>
+            <Typography variant="subtitle2" fontWeight="800">
+              {isStudent ? `Teacher: ${doubt.teacher?.name}` : `${doubt.student?.name}`}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              Sent on {new Date(doubt.createdAt).toLocaleDateString()}
+            </Typography>
+          </Box>
+        </Box>
+        {getStatusChip(doubt.status)}
+      </Box>
+
+      <Box sx={{ bgcolor: alpha('#2196F3', 0.03), p: 2, borderRadius: 2, mb: 2 }}>
+        <Typography variant="body1" fontWeight="500">
+          <strong>Q:</strong> {doubt.question}
+        </Typography>
+      </Box>
+
+      {doubt.answer ? (
+        <Box sx={{ bgcolor: alpha('#4caf50', 0.05), p: 2, borderRadius: 2, border: '1px solid rgba(76, 175, 80, 0.1)' }}>
+          <Typography variant="body1">
+            <strong>A:</strong> {doubt.answer}
+          </Typography>
+        </Box>
+      ) : !isStudent ? (
+        <Button 
+          variant="outlined" 
+          size="small" 
+          onClick={() => handleOpenResponse(doubt)}
+          startIcon={<Send />}
+          sx={{ mt: 1, borderRadius: 2 }}
+        >
+          Respond to Student
+        </Button>
+      ) : (
+        <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+          Waiting for teacher to respond...
+        </Typography>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const TeacherDoubtsView = ({ doubts, handleOpenResponse, getStatusChip }) => {
+  const [selectedClass, setSelectedClass] = React.useState(null);
+
+  // Group by Class -> Student
+  const groupedDoubts = {};
+  
+  doubts.forEach(doubt => {
+    const className = doubt.student?.Grade?.name 
+                   || (doubt.student?.grade ? `Class ${doubt.student.grade}` : 'Class Unassigned');
+    const studentName = doubt.student?.name || 'Unknown Student';
+    
+    if (!groupedDoubts[className]) {
+      groupedDoubts[className] = {};
+    }
+    if (!groupedDoubts[className][studentName]) {
+      groupedDoubts[className][studentName] = [];
+    }
+    groupedDoubts[className][studentName].push(doubt);
+  });
+
+  if (selectedClass && groupedDoubts[selectedClass]) {
+    return (
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button 
+            startIcon={<ArrowBack />} 
+            onClick={() => setSelectedClass(null)}
+            variant="outlined"
+            sx={{ borderRadius: 2 }}
+          >
+            Back to Classes
+          </Button>
+          <Typography variant="h6" fontWeight="bold">
+            {selectedClass}
+          </Typography>
+        </Box>
+        
+        {Object.keys(groupedDoubts[selectedClass]).map(studentName => (
+          <Accordion key={studentName} sx={{ mb: 2, boxShadow: 1, borderRadius: '8px !important', '&:before': { display: 'none' } }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Avatar sx={{ width: 32, height: 32 }}><Person fontSize="small" /></Avatar>
+                <Typography fontWeight="bold" variant="subtitle1">{studentName}</Typography>
+                <Chip 
+                  size="small" 
+                  label={`${groupedDoubts[selectedClass][studentName].length} Doubts`} 
+                  color="secondary" 
+                  sx={{ ml: 2, height: 24, fontWeight: 'bold' }} 
+                />
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
+              {groupedDoubts[selectedClass][studentName].map(doubt => (
+                <DoubtCard 
+                  key={doubt.id} 
+                  doubt={doubt} 
+                  isStudent={false} 
+                  handleOpenResponse={handleOpenResponse} 
+                  getStatusChip={getStatusChip} 
+                />
+              ))}
+            </AccordionDetails>
+          </Accordion>
+        ))}
+      </motion.div>
+    );
+  }
+
+  return (
+    <Grid container spacing={3}>
+      {Object.keys(groupedDoubts).map(className => {
+        const studentNames = Object.keys(groupedDoubts[className]);
+        let doubtCount = 0;
+        let pendingCount = 0;
+        studentNames.forEach(s => {
+          groupedDoubts[className][s].forEach(d => {
+            doubtCount++;
+            if (d.status === 'pending') pendingCount++;
+          });
+        });
+
+        return (
+          <Grid item xs={12} sm={6} md={4} key={className}>
+            <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
+              <Card 
+                onClick={() => setSelectedClass(className)}
+                sx={{ 
+                  cursor: 'pointer', 
+                  borderRadius: 4, 
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                  height: '100%',
+                  borderTop: pendingCount > 0 ? '4px solid #ff9800' : '4px solid #4caf50'
+                }}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 1.5 }}>
+                    <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+                      <School />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                        {className}
+                      </Typography>
+                      {pendingCount > 0 && (
+                        <Typography variant="caption" color="warning.main" fontWeight="bold">
+                          {pendingCount} Pending Resolution
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                  
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h6" fontWeight="bold" color="textPrimary">
+                        {studentNames.length}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">Students</Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h6" fontWeight="bold" color="textPrimary">
+                        {doubtCount}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">Total Doubts</Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+        );
+      })}
+    </Grid>
   );
 };
 

@@ -11,6 +11,12 @@ import {
   LinearProgress,
   Paper,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
@@ -201,7 +207,7 @@ const AdminDashboard = () => {
 
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {statCards.map((card) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={card.label}>
+            <Grid item xs={12} sm={6} md={4} key={card.label}>
               <Card sx={{ borderRadius: 3, color: 'white', bgcolor: card.color, height: '100%' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -209,7 +215,7 @@ const AdminDashboard = () => {
                       <Typography variant="body2" sx={{ opacity: 0.9 }}>
                         {card.label}
                       </Typography>
-                      <Typography variant="h4">{card.value}</Typography>
+                      <Typography variant="h4" fontWeight="bold">{card.value}</Typography>
                     </Box>
                     <Box sx={{ fontSize: 40, opacity: 0.85 }}>
                       {card.icon}
@@ -222,13 +228,13 @@ const AdminDashboard = () => {
         </Grid>
 
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 8 }}>
+          <Grid item xs={12} md={8}>
             <Paper sx={{ p: 3, borderRadius: 3, height: '100%' }}>
               <Typography variant="h6" gutterBottom>
                 Platform Overview
               </Typography>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }}>
+                <Grid item xs={12} sm={6}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="subtitle1" gutterBottom>
@@ -259,26 +265,26 @@ const AdminDashboard = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
+                <Grid item xs={12} sm={6}>
                   <Card variant="outlined" sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="subtitle1" gutterBottom>
                         Content Summary
                       </Typography>
                       <Grid container spacing={2}>
-                        <Grid size={6}>
+                        <Grid item xs={6}>
                           <Typography variant="body2" color="textSecondary">Videos</Typography>
                           <Typography variant="h5">{contentBreakdown.videos}</Typography>
                         </Grid>
-                        <Grid size={6}>
+                        <Grid item xs={6}>
                           <Typography variant="body2" color="textSecondary">Quizzes</Typography>
                           <Typography variant="h5">{contentBreakdown.quizzes}</Typography>
                         </Grid>
-                        <Grid size={6}>
+                        <Grid item xs={6}>
                           <Typography variant="body2" color="textSecondary">Assignments</Typography>
                           <Typography variant="h5">{contentBreakdown.assignments}</Typography>
                         </Grid>
-                        <Grid size={6}>
+                        <Grid item xs={6}>
                           <Typography variant="body2" color="textSecondary">Published</Typography>
                           <Typography variant="h5">{contentBreakdown.published}</Typography>
                         </Grid>
@@ -286,7 +292,7 @@ const AdminDashboard = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid size={12}>
+                <Grid item xs={12}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="subtitle1" gutterBottom>
@@ -329,7 +335,7 @@ const AdminDashboard = () => {
             </Paper>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid item xs={12} md={4}>
             <Stack spacing={3}>
               <Paper sx={{ p: 3, borderRadius: 3 }}>
                 <Typography variant="h6" gutterBottom>
@@ -395,9 +401,101 @@ const AdminDashboard = () => {
               </Paper>
             </Stack>
           </Grid>
+          <Grid item xs={12}>
+            <Paper sx={{ p: 4, borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 4, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                <Box>
+                  <Typography variant="h5" fontWeight="bold" gutterBottom>
+                    Platform Doubts ❓
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Monitor and manage student-teacher communications.
+                  </Typography>
+                </Box>
+                <Button variant="contained" onClick={() => navigate('/admin/doubts')} sx={{ borderRadius: 2, flexShrink: 0 }}>
+                  View All History
+                </Button>
+              </Box>
+              
+              <Divider sx={{ mb: 3 }} />
+              
+              <DoubtTable />
+            </Paper>
+          </Grid>
         </Grid>
       </motion.div>
     </Container>
+  );
+};
+
+const DoubtTable = () => {
+  const [doubts, setDoubts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDoubts = async () => {
+    try {
+      const res = await api.get('/api/doubts/all');
+      setDoubts(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDoubts();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this doubt permanently?')) return;
+    try {
+      await api.delete(`/api/doubts/${id}`);
+      setDoubts(prev => prev.filter(d => d.id !== id));
+      toast.success('Doubt deleted');
+    } catch (err) {
+      toast.error('Failed to delete');
+    }
+  };
+
+  if (loading) return <CircularProgress />;
+
+  return (
+    <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto', border: 'none', boxShadow: 'none' }}>
+      <Table sx={{ minWidth: 650 }}>
+        <TableHead>
+          <TableRow sx={{ bgcolor: 'action.hover' }}>
+            <TableCell sx={{ fontWeight: 'bold' }}>Student</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Teacher</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Question</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }} align="right">Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {doubts.slice(0, 5).map(doubt => (
+            <TableRow key={doubt.id} hover>
+              <TableCell>{doubt.student?.name}</TableCell>
+              <TableCell>{doubt.teacher?.name}</TableCell>
+              <TableCell sx={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {doubt.question}
+              </TableCell>
+              <TableCell>
+                <Chip size="small" label={doubt.status} color={doubt.status === 'resolved' ? 'success' : 'warning'} />
+              </TableCell>
+              <TableCell align="right">
+                <Button size="small" color="error" variant="outlined" onClick={() => handleDelete(doubt.id)}>Delete</Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {doubts.length === 0 && (
+        <Typography sx={{ py: 4, textAlign: 'center' }} color="textSecondary">
+          No doubts found on the platform.
+        </Typography>
+      )}
+    </TableContainer>
   );
 };
 

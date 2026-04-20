@@ -343,7 +343,7 @@ const TopicManager = () => {
             </Paper>
 
             <Paper sx={{ p: 0, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)', border: '1px solid #e2e8f0' }}>
-              <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
                 <Typography variant="h6" fontWeight="700">Subjects {selectedClass ? `for Class ${selectedClass.level}` : ''}</Typography>
                 <TextField
                   size="small"
@@ -353,7 +353,7 @@ const TopicManager = () => {
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>,
                   }}
-                  sx={{ width: 160 }}
+                  sx={{ width: { xs: '100%', sm: 160 } }}
                 />
               </Box>
               <List sx={{ p: 0, height: 400, overflow: 'auto' }}>
@@ -479,7 +479,7 @@ const TopicManager = () => {
             </Paper>
 
             <Paper sx={{ p: 0, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)', border: '1px solid #e2e8f0' }}>
-              <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
                 <Typography variant="h6" fontWeight="700">Topics {selectedSubject ? `in ${selectedSubject.name}` : ''}</Typography>
                 <TextField
                   size="small"
@@ -489,7 +489,7 @@ const TopicManager = () => {
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>,
                   }}
-                  sx={{ width: 160 }}
+                  sx={{ width: { xs: '100%', sm: 160 } }}
                 />
               </Box>
               <List sx={{ p: 0, height: 400, overflow: 'auto' }}>

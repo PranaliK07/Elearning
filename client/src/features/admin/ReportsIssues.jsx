@@ -204,8 +204,8 @@ const ReportsIssues = () => {
             </Menu>
           </Box>
 
-          <TableContainer>
-            <Table>
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 600 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Type</TableCell>

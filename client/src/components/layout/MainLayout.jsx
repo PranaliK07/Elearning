@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Box, AppBar, Toolbar, IconButton, Typography, Avatar, Menu, MenuItem, Badge, Divider } from '@mui/material';
+import { Box, AppBar, Toolbar, IconButton, Typography, Avatar, Menu, MenuItem, Badge, Divider, useTheme } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { 
   Menu as MenuIcon,
@@ -21,6 +21,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 const MainLayout = () => {
   const { user, logout } = useAuth();
   const { mode, setMode } = React.useContext(ThemeContext);
+  const theme = useTheme();
   const { 
     notifications, 
     unreadCount, 
@@ -29,6 +30,10 @@ const MainLayout = () => {
     markAsRead, 
     markAllAsRead 
   } = useNotification();
+  
+  React.useEffect(() => {
+    console.log('[MainLayout Diagnostic] Current User:', user?.id, 'Role:', user?.role, 'Unread Count:', unreadCount);
+  }, [user, unreadCount]);
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -57,14 +62,70 @@ const MainLayout = () => {
       markAsRead(notification.id);
     }
 
-    const source = notification?.data?.source;
-    const communicationId = notification?.data?.communicationId;
+    handleNotificationsClose();
+
+    const { type, data } = notification;
+    const role = user?.role;
+
+    // Handle legacy/specific source data
+    const source = data?.source;
+    const communicationId = data?.communicationId || data?.id;
+    
     if (source === 'class_communication' && communicationId) {
-      handleNotificationsClose();
-      navigate(`/communications/${communicationId}`);
-    } else if (notification.type === 'doubt') {
-      handleNotificationsClose();
-      navigate('/doubts');
+      return navigate(`/communications/${communicationId}`);
+    }
+
+    // Modern type-based routing
+    switch (type) {
+      case 'doubt':
+        navigate('/doubts');
+        break;
+
+      case 'quiz':
+        navigate('/play#quizzes');
+        break;
+
+      case 'quiz_result':
+      case 'achievement':
+        navigate('/achievements');
+        break;
+
+      case 'reminder':
+      case 'assignment':
+        if (role === 'student') {
+          navigate('/homework');
+        } else {
+          navigate('/assignments/create');
+        }
+        break;
+
+      case 'announcement':
+        navigate('/dashboard');
+        break;
+
+      case 'class_communication':
+        if (communicationId) {
+          navigate(`/communications/${communicationId}`);
+        } else {
+          navigate('/class-communication');
+        }
+        break;
+
+      case 'attendance':
+        navigate(role === 'student' ? '/attendance' : '/attendance/manage');
+        break;
+
+      case 'feedback':
+        navigate('/feedback');
+        break;
+
+      case 'content':
+        navigate((role === 'admin' || role === 'teacher') ? '/admin/content' : '/study');
+        break;
+
+      default:
+        console.warn('[Notifications] No specific route for type:', type);
+        navigate('/dashboard');
     }
   };
 
@@ -173,7 +234,21 @@ const MainLayout = () => {
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           >
             <MenuItem onClick={handleProfile}>Profile</MenuItem>
-            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+            <MenuItem 
+              onClick={handleLogout} 
+              sx={{ 
+                bgcolor: '#8b0000 !important', 
+                color: '#FFFFFF !important',
+                fontWeight: 'bold',
+                m: '4px',
+                borderRadius: '8px',
+                '&:hover': {
+                  bgcolor: '#5d0000 !important'
+                }
+              }}
+            >
+              Logout
+            </MenuItem>
           </Menu>
 
           <Menu
@@ -216,20 +291,29 @@ const MainLayout = () => {
                 key={item.id}
                 onClick={() => handleNotificationClick(item)}
                 sx={{
+                  py: 1.5,
+                  px: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'flex-start',
                   whiteSpace: 'normal',
-                  gap: 1,
-                  bgcolor: item.isRead ? 'transparent' : 'rgba(176,18,91,0.08)'
+                  borderBottom: `1px solid ${theme.palette.divider}`,
+                  gap: 0.5,
+                  bgcolor: item.isRead ? 'transparent' : theme.palette.action.hover,
+                  '&:hover': {
+                    bgcolor: theme.palette.action.selected,
+                  }
                 }}
               >
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: item.isRead ? 500 : 700 }}>
-                    {item.title}
-                  </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    {item.message}
-                  </Typography>
-                </Box>
+                <Typography variant="body2" sx={{ fontWeight: item.isRead ? 600 : 800, color: 'text.primary' }}>
+                  {item.title}
+                </Typography>
+                <Typography variant="caption" color="textSecondary" sx={{ lineHeight: 1.4 }}>
+                  {item.message}
+                </Typography>
+                <Typography variant="caption" sx={{ mt: 0.5, color: 'text.disabled', fontSize: '0.7rem' }}>
+                  {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Typography>
               </MenuItem>
             ))}
           </Menu>
@@ -242,11 +326,14 @@ const MainLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          width: { sm: `calc(100% - 240px)` },
-          ml: { sm: '240px' },
+          width: { xs: '100%', sm: 'auto' },
+          minWidth: 0,
           mt: { xs: '56px', sm: '64px' },
           mb: { xs: '56px', sm: 0 },
-          p: { xs: 2, sm: 3 }
+          pl: { xs: 0, sm: 2.5 },
+          pr: { xs: 0.5, sm: 1 },
+          py: { xs: 0.5, sm: 1 },
+          overflowX: 'hidden'
         }}
       >
         <ErrorBoundary>

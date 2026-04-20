@@ -16,7 +16,9 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Chip
+  Chip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import toast from 'react-hot-toast';
 import api from '../../utils/axios';
@@ -142,23 +144,44 @@ const FeedbackPage = () => {
     }
   };
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   return (
-    <Container maxWidth="lg">
-      <Paper sx={{ p: 3, borderRadius: 3 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={2}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 4, boxShadow: 1, border: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: 2, 
+          mb: 3 
+        }}>
           <Box>
-            <Typography variant="h4">Feedback & Ratings</Typography>
-            <Typography variant="body2" color="textSecondary">
-              {isStaff ? 'Give rating and comments to students.' : 'View your personal ratings and comments.'}
+            <Typography variant={isMobile ? "h4" : "h3"} fontWeight="900" sx={{ 
+              background: 'linear-gradient(45deg, #FFB300 30%, #F57C00 90%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              Feedback & Ratings ⭐
+            </Typography>
+            <Typography variant="body1" color="textSecondary" sx={{ mt: 0.5, fontWeight: 500 }}>
+              {isStaff ? 'Evaluate and provide constructive feedback to students.' : 'Review your performance insights and teacher comments.'}
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip label={`Avg: ${averageRating || 0}`} color="primary" variant="outlined" />
-            <Chip label={`${feedbackItems.length} entries`} variant="outlined" />
+          <Stack direction="row" spacing={1.5}>
+            <Paper variant="outlined" sx={{ px: 2, py: 0.75, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'primary.50' }}>
+              <Typography variant="caption" fontWeight="bold">AVG</Typography>
+              <Typography variant="subtitle2" color="primary.main" fontWeight="bold">
+                {averageRating || 0.0}
+              </Typography>
+            </Paper>
+            <Chip label={`${feedbackItems.length} Entries`} variant="outlined" sx={{ borderRadius: 2, fontWeight: 'bold' }} />
           </Stack>
-        </Stack>
+        </Box>
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ mb: 4 }} />
 
         {isStaff && (
           <Box sx={{ mb: 3 }}>
@@ -207,39 +230,65 @@ const FeedbackPage = () => {
           </Box>
         )}
 
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          {isStaff ? (selectedStudent ? `Feedback for ${selectedStudent.name}` : 'Select a student to view feedback') : 'My Feedback'}
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, mt: isStaff ? 4 : 0 }}>
+          {isStaff ? (selectedStudent ? `Recent Feedback for ${selectedStudent.name}` : 'Select a student to view history') : 'My Feedback History'}
         </Typography>
 
-        <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>From</TableCell>
-                <TableCell>Rating</TableCell>
-                <TableCell>Comment</TableCell>
-                <TableCell>When</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {feedbackItems.length === 0 ? (
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            Loading feedback records...
+          </Box>
+        ) : feedbackItems.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 6, border: '1px dashed #ccc', borderRadius: 3, bgcolor: 'action.hover' }}>
+             <Typography variant="body1" color="textSecondary">
+               No feedback entries found yet.
+             </Typography>
+          </Box>
+        ) : isMobile ? (
+          <Stack spacing={2}>
+            {feedbackItems.map((item) => (
+              <Paper key={item.id} variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Avatar src={resolveAvatarSrc(item?.author?.avatar)} sx={{ width: 32, height: 32 }}>
+                      {item?.author?.name?.charAt(0) || 'U'}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">{item?.author?.name}</Typography>
+                      <Typography variant="caption" color="textSecondary">{item?.author?.role}</Typography>
+                    </Box>
+                  </Stack>
+                  <Rating value={Number(item.rating)} size="small" readOnly />
+                </Box>
+                <Typography variant="body2" color="textPrimary" sx={{ fontStyle: item.comment ? 'normal' : 'italic', mb: 2 }}>
+                  {item.comment || 'No comment provided.'}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {formatWhen(item.createdAt)}
+                </Typography>
+              </Paper>
+            ))}
+          </Stack>
+        ) : (
+          <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
+            <TableContainer>
+            <Table size="medium">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={4}>
-                    <Typography variant="body2" color="textSecondary">
-                      {loading ? 'Loading...' : 'No feedback yet.'}
-                    </Typography>
-                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>From</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Rating</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Comment</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
                 </TableRow>
-              ) : (
-                feedbackItems.map((item) => (
-                  <TableRow key={item.id}>
+              </TableHead>
+              <TableBody>
+                {feedbackItems.map((item) => (
+                  <TableRow key={item.id} hover>
                     <TableCell>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar src={resolveAvatarSrc(item?.author?.avatar)} sx={{ width: 28, height: 28 }}>
-                          {item?.author?.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </Avatar>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Avatar src={resolveAvatarSrc(item?.author?.avatar)} sx={{ width: 32, height: 32 }} />
                         <Box>
-                          <Typography variant="body2">{item?.author?.name || 'Unknown'}</Typography>
+                          <Typography variant="subtitle2" fontWeight="bold">{item?.author?.name || 'Unknown'}</Typography>
                           <Typography variant="caption" color="textSecondary">{item?.author?.role || ''}</Typography>
                         </Box>
                       </Stack>
@@ -247,7 +296,7 @@ const FeedbackPage = () => {
                     <TableCell>
                       <Rating value={Number(item.rating) || 0} readOnly size="small" />
                     </TableCell>
-                    <TableCell sx={{ maxWidth: 520 }}>
+                    <TableCell sx={{ maxWidth: 400 }}>
                       <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                         {item.comment || '-'}
                       </Typography>
@@ -258,11 +307,12 @@ const FeedbackPage = () => {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </Paper>
+                ))}
+              </TableBody>
+            </Table>
+            </TableContainer>
+          </Paper>
+        )}
       </Paper>
     </Container>
   );

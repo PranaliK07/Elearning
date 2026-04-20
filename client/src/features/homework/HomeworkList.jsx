@@ -111,24 +111,24 @@ const HomeworkList = () => {
   const pendingCount = assignments.filter(a => !a.Submissions?.[0] && new Date(a.dueDate) >= new Date()).length;
   const overdueCount = assignments.filter(a => !a.Submissions?.[0] && new Date(a.dueDate) < new Date()).length;
 
-  if (loading) {
+    if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ py: 4, px: 2 }}>
         <Box sx={{ mb: 4 }}>
           <Skeleton variant="text" width={200} height={48} />
           <Skeleton variant="text" width={300} height={24} />
         </Box>
         <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 3 }} />
-      </Container>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+    <Box sx={{ py: 0.5, pl: 0.5, pr: 1.5 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 1 }}>
         <Typography 
-          variant={isMobile ? "h5" : "h4"} 
+          variant={isMobile ? "h6" : "h5"} 
           fontWeight="bold" 
           gutterBottom 
           sx={{ 
@@ -138,10 +138,10 @@ const HomeworkList = () => {
             gap: 1
           }}
         >
-          <AssignmentIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+          <AssignmentIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />
           Assignments
         </Typography>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1, flexWrap: 'wrap' }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
           <Typography variant="body2" color="textSecondary">
             Total: <strong>{assignments.length}</strong>
           </Typography>
@@ -306,7 +306,7 @@ const HomeworkList = () => {
           Please complete these assignments as soon as possible.
         </Alert>
       )}
-    </Container>
+    </Box>
   );
 };
 

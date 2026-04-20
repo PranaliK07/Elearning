@@ -39,6 +39,10 @@ const Progress = sequelize.define('Progress', {
   notes: {
     type: DataTypes.TEXT
   },
+  notesDownloaded: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   bookmarked: {
     type: DataTypes.BOOLEAN,
     defaultValue: false

@@ -172,7 +172,7 @@ const WatchTimeStats = ({ weekly = false }) => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+    <Box sx={{ px: 1 }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -444,7 +444,7 @@ const WatchTimeStats = ({ weekly = false }) => {
           </Grid>
         </Grid>
       </motion.div>
-    </Container>
+    </Box>
   );
 };
 

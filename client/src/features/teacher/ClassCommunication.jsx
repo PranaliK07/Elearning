@@ -19,7 +19,11 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography
+  Typography,
+  useTheme,
+  useMediaQuery,
+  Stack,
+  Divider as MuiDivider
 } from '@mui/material';
 import { Campaign, Send } from '@mui/icons-material';
 import axios from '../../utils/axios';
@@ -172,13 +176,20 @@ const ClassCommunication = () => {
     }
   };
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          Class Communication
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant={isMobile ? "h4" : "h3"} fontWeight="900" gutterBottom sx={{ 
+          background: 'linear-gradient(45deg, #1A237E 30%, #3F51B5 90%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}>
+          Class Communication 📢
         </Typography>
-        <Typography variant="body1" color="textSecondary">
+        <Typography variant="body1" color="textSecondary" sx={{ fontWeight: 500 }}>
           Send updates to students, parents, or both by class.
         </Typography>
       </Box>
@@ -292,19 +303,20 @@ const ClassCommunication = () => {
         )}
 
         <Grid item xs={12} md={isStudent ? 12 : 7}>
-          <Paper sx={{ p: 2, borderRadius: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+          <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 4, boxShadow: 1, border: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Campaign color="secondary" />
               Communication History
             </Typography>
 
             {!canViewHistory ? (
-              <Typography variant="body2" color="textSecondary">
-                Communication history is available to admins only.
+              <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 4 }}>
+                Communication history is available to authorized users only.
               </Typography>
             ) : (
               <>
-                <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={12} md={4}>
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} sm={6} md={4}>
                     <FormControl fullWidth>
                       <InputLabel>Class</InputLabel>
                       <Select
@@ -322,25 +334,27 @@ const ClassCommunication = () => {
                     </FormControl>
                   </Grid>
 
-                  <Grid item xs={12} md={4}>
-                    <FormControl fullWidth>
-                      <InputLabel>Teacher</InputLabel>
-                      <Select
-                        label="Teacher"
-                        value={filters.teacherId}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, teacherId: e.target.value }))}
-                      >
-                        <MenuItem value="">All Teachers</MenuItem>
-                        {teachers.map((teacher) => (
-                          <MenuItem key={teacher.id} value={teacher.id}>
-                            {teacher.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
+                  {isAdmin && (
+                    <Grid item xs={12} sm={6} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel>Teacher</InputLabel>
+                        <Select
+                          label="Teacher"
+                          value={filters.teacherId}
+                          onChange={(e) => setFilters((prev) => ({ ...prev, teacherId: e.target.value }))}
+                        >
+                          <MenuItem value="">All Teachers</MenuItem>
+                          {teachers.map((teacher) => (
+                            <MenuItem key={teacher.id} value={teacher.id}>
+                              {teacher.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  )}
 
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} sm={isAdmin ? 12 : 6} md={4}>
                     <FormControl fullWidth>
                       <InputLabel>Audience</InputLabel>
                       <Select
@@ -348,10 +362,10 @@ const ClassCommunication = () => {
                         value={filters.audience}
                         onChange={(e) => setFilters((prev) => ({ ...prev, audience: e.target.value }))}
                       >
-                        <MenuItem value="">All</MenuItem>
+                        <MenuItem value="">All Audiences</MenuItem>
                         <MenuItem value="students">Students</MenuItem>
                         <MenuItem value="parents">Parents</MenuItem>
-                        <MenuItem value="both">Students + Parents</MenuItem>
+                        <MenuItem value="both">Both</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
@@ -359,50 +373,84 @@ const ClassCommunication = () => {
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Search (title, message, class, sender)"
+                      label="Search messages..."
                       value={filters.search}
                       onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                      placeholder="Title, message, class, or sender"
                     />
                   </Grid>
                 </Grid>
 
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Title</TableCell>
-                        <TableCell>Class</TableCell>
-                        <TableCell>Sender</TableCell>
-                        <TableCell>Audience</TableCell>
-                        <TableCell>Recipients</TableCell>
-                        <TableCell>Date</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {loading ? (
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+                    Loading communications...
+                  </Box>
+                ) : filteredCommunications.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
+                    <Typography variant="body1">No communications found</Typography>
+                  </Box>
+                ) : isMobile ? (
+                  <Stack spacing={2}>
+                    {filteredCommunications.map((item) => (
+                      <Paper key={item.id} variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle1" fontWeight="bold">{item.title}</Typography>
+                            <Typography variant="caption" color="textSecondary" display="block">
+                              {item.Grade?.name || 'All Classes'} • {new Date(item.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={audienceLabel[item.audience]}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        </Box>
+                        <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                          {item.message}
+                        </Typography>
+                        <MuiDivider sx={{ mb: 1.5 }} />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="caption" color="textSecondary">
+                            By: {item.teacher?.name || 'Admin'}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {item.recipientCount || 0} Recipients
+                          </Typography>
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Stack>
+                ) : (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
                         <TableRow>
-                          <TableCell colSpan={6} align="center">
-                            Loading...
-                          </TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Title & Message</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Class</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Sender</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Audience</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
                         </TableRow>
-                      ) : filteredCommunications.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center">
-                            No communication sent yet
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredCommunications.map((item) => (
+                      </TableHead>
+                      <TableBody>
+                        {filteredCommunications.map((item) => (
                           <TableRow key={item.id} hover>
-                            <TableCell>
-                              <Typography variant="subtitle2">{item.title}</Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                {item.message?.slice(0, 80)}
-                                {item.message?.length > 80 ? '...' : ''}
+                            <TableCell sx={{ maxWidth: 300 }}>
+                              <Typography variant="subtitle2" fontWeight="bold">{item.title}</Typography>
+                              <Typography variant="caption" color="textSecondary" sx={{
+                                display: '-webkit-box',
+                                WebkitLineGapLimit: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}>
+                                {item.message}
                               </Typography>
                             </TableCell>
                             <TableCell>{item.Grade?.name || 'All Classes'}</TableCell>
-                            <TableCell>{item.teacher?.name || item.teacher?.email || '—'}</TableCell>
+                            <TableCell>{item.teacher?.name || '—'}</TableCell>
                             <TableCell>
                               <Chip
                                 label={audienceLabel[item.audience] || item.audience}
@@ -411,14 +459,13 @@ const ClassCommunication = () => {
                                 variant="outlined"
                               />
                             </TableCell>
-                            <TableCell>{item.recipientCount || 0}</TableCell>
-                            <TableCell>{new Date(item.createdAt).toLocaleString()}</TableCell>
+                            <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
               </>
             )}
           </Paper>

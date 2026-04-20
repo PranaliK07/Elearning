@@ -1,5 +1,6 @@
-const { Content, Topic, User, Progress, Comment, Like, Bookmark, Grade, Subject, Lesson } = require('../models');
+const { Content, Topic, User, Progress, Comment, Like, Bookmark, Grade, Subject, Lesson, Notification } = require('../models');
 const { Op } = require('sequelize');
+const { createNotification } = require('../utils/notifications');
 
 const resolveStudentGradeId = async (user) => {
   if (!user) return null;
@@ -195,6 +196,61 @@ const createContent = async (req, res) => {
       createdBy: req.user.id
     });
 
+    // Notify students and teachers about new content uploads
+    try {
+      const studentWhere = { role: 'student' };
+      if (finalGradeId) {
+        const targetGrade = await Grade.findByPk(finalGradeId, { attributes: ['id', 'level'] });
+        studentWhere[Op.or] = [
+          { GradeId: finalGradeId },
+          ...(targetGrade?.level ? [{ grade: targetGrade.level }] : [])
+        ];
+      }
+      
+      const students = await User.findAll({
+        where: studentWhere,
+        attributes: ['id']
+      });
+      const teachers = await User.findAll({
+        where: {
+          role: 'teacher',
+          isActive: true,
+          isDeleted: false,
+          id: { [Op.ne]: req.user.id }
+        },
+        attributes: ['id']
+      });
+      
+      if (students.length > 0 || teachers.length > 0) {
+        const typeLabel = type === 'reading'
+          ? 'New Notes Uploaded'
+          : type === 'video'
+            ? 'New Video Uploaded'
+            : 'New Study Material Uploaded';
+
+        await Notification.bulkCreate([
+          ...students.map((student) => ({
+            userId: student.id,
+            senderId: req.user.id,
+            type: 'announcement',
+            title: typeLabel,
+            message: `"${title}" has been uploaded to your classroom library.`,
+            data: { contentId: content.id, contentType: type, gradeId: finalGradeId }
+          })),
+          ...teachers.map((teacher) => ({
+            userId: teacher.id,
+            senderId: req.user.id,
+            type: 'announcement',
+            title: typeLabel,
+            message: `"${title}" has been uploaded and is now available for students.`,
+            data: { contentId: content.id, contentType: type, gradeId: finalGradeId }
+          }))
+        ]);
+      }
+    } catch (notifErr) {
+      console.error('New content notification error:', notifErr);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Content created successfully',
@@ -370,6 +426,23 @@ const toggleLike = async (req, res) => {
         UserId: userId
       });
       await Content.increment('likes', { by: 1, where: { id: contentId } });
+      
+      // Notify creator about the like
+      try {
+        const content = await Content.findByPk(contentId);
+        if (content && content.createdBy !== userId) {
+          await createNotification(
+            content.createdBy,
+            'like',
+            'Someone liked your content! ❤️',
+            `${req.user.name} liked your lesson "${content.title}"`,
+            { contentId, likedBy: userId }
+          );
+        }
+      } catch (notifErr) {
+        console.error('Like notification error:', notifErr);
+      }
+      
       res.json({ liked: true });
     }
   } catch (error) {
@@ -392,8 +465,26 @@ const addComment = async (req, res) => {
       include: [{
         model: User,
         attributes: ['id', 'name', 'avatar']
+      }, {
+        model: Content,
+        attributes: ['id', 'title', 'createdBy']
       }]
     });
+
+    // Notify content creator
+    try {
+      if (commentWithUser.Content && commentWithUser.Content.createdBy !== req.user.id) {
+        await createNotification(
+          commentWithUser.Content.createdBy,
+          'comment',
+          'New Comment on your Lesson! 💬',
+          `${req.user.name} commented on "${commentWithUser.Content.title}": "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
+          { contentId: commentWithUser.Content.id, commentId: comment.id }
+        );
+      }
+    } catch (notifErr) {
+      console.error('Comment notification error:', notifErr);
+    }
 
     res.status(201).json(commentWithUser);
   } catch (error) {

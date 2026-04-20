@@ -59,11 +59,13 @@ const AboutPage = () => {
 
   const handleFooterLinkClick = (target) => {
     if (target !== '/#features') {
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 0);
     }
   };
+  const roleModules = [
+    { icon: <Psychology />, title: 'Student', items: ['Lessons & Topics', 'Quizzes & Practice', 'Progress Tracker'], color: brandNavy, bg: 'linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%)' },
+    { icon: <AutoGraph />, title: 'Teacher', items: ['Assignments & Feedback', 'Class Insights', 'Content Management'], color: brandPink, bg: 'linear-gradient(135deg, #ffffff 0%, #fff0f7 100%)' },
+    { icon: <Dashboard />, title: 'Admin', items: ['User & Role Management', 'Reports & Analytics', 'System Settings'], color: brandNavyMid, bg: 'linear-gradient(135deg, #ffffff 0%, #f7f0ff 100%)' }
+  ];
 
   const dashboardShots = [
     { src: studentDashboard, title: 'Student Dashboard' },
@@ -138,7 +140,7 @@ const AboutPage = () => {
             transition={{ duration: 0.8 }}
           >
             <Grid container spacing={4} alignItems="center" justifyContent="center">
-              <Grid item xs={12} md={10}>
+              <Grid size={{ xs: 12, md: 10 }}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography
                     variant="h1"
@@ -194,7 +196,7 @@ const AboutPage = () => {
             transition={{ duration: 0.8 }}
           >
             <Grid container spacing={4} alignItems="center" justifyContent="center">
-              <Grid item xs={12} md={8}>
+              <Grid size={{ xs: 12, md: 8 }}>
                 <Box sx={{ textAlign: 'center', mb: 4 }}>
                   <Typography variant="h3" sx={{ fontWeight: 900, mb: 3, color: brandNavy, fontFamily: '"Fraunces", serif' }}>
                     Our Story
@@ -228,7 +230,7 @@ const AboutPage = () => {
           </Box>
           <Grid container spacing={4} wrap="nowrap" sx={{ overflowX: 'auto', pb: 4, px: 1 }}>
             {dashboardShots.map((shot, idx) => (
-              <Grid item xs={12} sm={6} md={4} lg={4} sx={{ minWidth: { xs: 300, md: 360 } }} key={shot.title}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }} sx={{ minWidth: { xs: 300, md: 360 } }} key={shot.title}>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
@@ -335,12 +337,8 @@ const AboutPage = () => {
             </Typography>
           </Box>
           <Grid container spacing={4} justifyContent="center">
-            {[
-              { icon: <Psychology />, title: 'Student', items: ['Lessons & Topics', 'Quizzes & Practice', 'Progress Tracker'], color: brandNavy, bg: 'linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%)' },
-              { icon: <AutoGraph />, title: 'Teacher', items: ['Assignments & Feedback', 'Class Insights', 'Content Management'], color: brandPink, bg: 'linear-gradient(135deg, #ffffff 0%, #fff0f7 100%)' },
-              { icon: <Dashboard />, title: 'Admin', items: ['User & Role Management', 'Reports & Analytics', 'System Settings'], color: brandNavyMid, bg: 'linear-gradient(135deg, #ffffff 0%, #f7f0ff 100%)' }
-            ].map((role, idx) => (
-              <Grid item xs={12} md={4} key={role.title} sx={{ display: 'flex' }}>
+            {roleModules.map((role, idx) => (
+              <Grid size={{ xs: 12, md: 4 }} key={role.title} sx={{ display: 'flex' }}>
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -411,7 +409,7 @@ const AboutPage = () => {
           </Box>
           <Grid container spacing={4} wrap="nowrap" sx={{ overflowX: 'auto', pb: 4, px: 1 }}>
             {values.map((value, idx) => (
-              <Grid item xs={12} md={4} sx={{ minWidth: 320, display: 'flex' }} key={value.title}>
+              <Grid size={{ xs: 12, md: 4 }} sx={{ minWidth: 320, display: 'flex' }} key={value.title}>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}

@@ -24,13 +24,13 @@ import { useAuth } from '../../context/AuthContext';
 const gradeStyles = {
   1: { color: '#FF6B6B', icon: <LooksOne sx={{ fontSize: 64, color: 'white' }} />, description: 'Beginner Level' },
   2: { color: '#4ECDC4', icon: <LooksTwo sx={{ fontSize: 64, color: 'white' }} />, description: 'Foundation' },
-  3: { color: '#45B7D1', icon: <Looks3 sx={{ fontSize: 64, color: 'white' }} />, description: 'Building Skills' },
-  4: { color: '#96CEB4', icon: <Looks4 sx={{ fontSize: 64, color: 'white' }} />, description: 'Intermediate' },
+  3: { color: '#B0125B', icon: <Looks3 sx={{ fontSize: 64, color: 'white' }} />, description: 'Building Skills' },
+  4: { color: '#1a237e', icon: <Looks4 sx={{ fontSize: 64, color: 'white' }} />, description: 'Intermediate' },
   5: { color: '#FFEAA7', icon: <Looks5 sx={{ fontSize: 64, color: 'white' }} />, description: 'Advanced' },
   6: { color: '#A78BFA', icon: <Looks6 sx={{ fontSize: 64, color: 'white' }} />, description: 'Advanced' }
 };
 
-const fallbackColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#A78BFA', '#0EA5E9', '#22C55E', '#F59E0B', '#F97316'];
+const fallbackColors = ['#FF6B6B', '#4ECDC4', '#B0125B', '#1a237e', '#FFEAA7', '#A78BFA', '#B0125B', '#22C55E', '#F59E0B', '#F97316'];
 const getFallbackColor = (level) => fallbackColors[(Math.max(1, Number(level) || 1) - 1) % fallbackColors.length];
 
 const getGradeStyle = (grade) => {
@@ -110,10 +110,10 @@ const GradeSelect = () => {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Box sx={{ px: 1 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography variant="h3" component="h1" gutterBottom sx={{ fontFamily: '"Comic Neue", cursive', fontWeight: 'bold', color: 'primary.main' }}>
+          <Typography variant="h3" component="h1" gutterBottom sx={{ fontFamily: '"Comic Neue", cursive', fontWeight: 'bold', color: 'primary.main', fontSize: { xs: '2rem', sm: '3rem' } }}>
             Choose a Class
           </Typography>
           <Typography variant="h6" color="textSecondary">
@@ -121,9 +121,9 @@ const GradeSelect = () => {
           </Typography>
         </Box>
 
-        <Grid container spacing={3} alignItems="stretch">
+        <Grid container spacing={3} alignItems="stretch" justifyContent="center">
           {gradeData.map((grade, index) => (
-            <Grid item xs={12} sm={6} md={4} key={grade.level} sx={{ display: 'flex' }}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={grade.level} sx={{ display: 'flex' }}>
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -148,7 +148,7 @@ const GradeSelect = () => {
                     '&:hover': { boxShadow: 8 }
                   }}
                 >
-                  <Box sx={{ height: 140, backgroundColor: grade.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Box sx={{ height: { xs: 110, sm: 140 }, backgroundColor: grade.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {grade.icon}
                   </Box>
                   <CardContent sx={{ flex: 1 }}>
@@ -177,7 +177,7 @@ const GradeSelect = () => {
           ))}
         </Grid>
       </motion.div>
-    </Container>
+    </Box>
   );
 };
 

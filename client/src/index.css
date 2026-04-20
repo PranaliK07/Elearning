@@ -98,5 +98,34 @@ code {
     overflow-wrap: anywhere;
     word-break: break-word;
   }
+
+  /* Prevent any container from causing horizontal overflow */
+  .MuiContainer-root {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Ensure dialogs never exceed viewport */
+  .MuiDialog-paper {
+    width: calc(100% - 24px) !important;
+    margin: 12px !important;
+    max-height: calc(100% - 24px) !important;
+  }
+
+  /* Card paddings on small screens */
+  .MuiCardContent-root {
+    padding: 12px !important;
+  }
+}
+
+/* Prevent ANY element causing horizontal scrollbar */
+* {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Override: images & videos can still be block */
+img, video, canvas, svg {
+  max-width: 100%;
 }
 

@@ -4,6 +4,7 @@ const { Assignment, Submission, User, Subject, Grade, Lesson, Notification } = r
 const { protect, authorize } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const { sendParentNotification } = require('../utils/parentNotifier');
+const { createNotification } = require('../utils/notifications');
 
 const notifyParentForOverdue = async (assignments, user) => {
   if (!user?.parentEmail || !Array.isArray(assignments)) return;
@@ -196,6 +197,77 @@ router.post('/', protect, authorize('teacher', 'admin'), async (req, res) => {
       ...payload,
       teacherId: req.user.id
     });
+
+    try {
+      const studentWhere = {
+        role: 'student',
+        isActive: true,
+        isDeleted: false
+      };
+
+      let assignmentGrade = null;
+      if (assignment.gradeId) {
+        assignmentGrade = await Grade.findByPk(assignment.gradeId, { attributes: ['id', 'level'] });
+        studentWhere[Op.or] = [
+          { GradeId: assignment.gradeId },
+          ...(assignmentGrade?.level ? [{ grade: assignmentGrade.level }] : [])
+        ];
+      }
+
+      const [students, teachers, subject] = await Promise.all([
+        User.findAll({
+          where: studentWhere,
+          attributes: ['id']
+        }),
+        User.findAll({
+          where: {
+            role: 'teacher',
+            isActive: true,
+            isDeleted: false,
+            id: { [Op.ne]: req.user.id }
+          },
+          attributes: ['id']
+        }),
+        assignment.subjectId
+          ? Subject.findByPk(assignment.subjectId, { attributes: ['name'] })
+          : Promise.resolve(null)
+      ]);
+
+      if (students.length || teachers.length) {
+        const subjectName = subject?.name || 'your class';
+        await Notification.bulkCreate(
+          [
+            ...students.map((student) => ({
+              userId: student.id,
+              senderId: req.user.id,
+              type: 'reminder',
+              title: 'New Home Work Assigned',
+              message: `A new assignment "${assignment.title}" has been posted for ${subjectName}.`,
+              data: {
+                assignmentId: assignment.id,
+                gradeId: assignment.gradeId,
+                subjectId: assignment.subjectId
+              }
+            })),
+            ...teachers.map((teacher) => ({
+              userId: teacher.id,
+              senderId: req.user.id,
+              type: 'announcement',
+              title: 'Homework Published',
+              message: `A new homework "${assignment.title}" has been published for ${subjectName}.`,
+              data: {
+                assignmentId: assignment.id,
+                gradeId: assignment.gradeId,
+                subjectId: assignment.subjectId
+              }
+            }))
+          ]
+        );
+      }
+    } catch (notifErr) {
+      console.error('Assignment create notification error:', notifErr);
+    }
+
     res.status(201).json(assignment);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -287,6 +359,19 @@ router.post('/:id/submissions', protect, authorize('student'), async (req, res) 
       status: 'submitted'
     });
 
+    // Notify the teacher about the submission
+    try {
+      await createNotification(
+        assignment.teacherId,
+        'doubt', // Using 'doubt' or similar since it's a notification for teacher to take action
+        'New Homework Submitted 📤',
+        `${req.user.name} has submitted their work for "${assignment.title}".`,
+        { submissionId: submission.id, assignmentId: assignment.id, studentId: req.user.id }
+      );
+    } catch (notifErr) {
+      console.error('Homework submission notification error:', notifErr);
+    }
+
     res.status(201).json(submission);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -323,6 +408,19 @@ router.put('/submissions/:submissionId/grade', protect, authorize('teacher', 'ad
     submission.feedback = feedback ? String(feedback).trim() : null;
     submission.status = 'graded';
     await submission.save();
+
+    // Notify the student that their submission has been graded
+    try {
+      await createNotification(
+        submission.studentId,
+        'quiz_result',
+        'Homework Graded! ✨',
+        `Your submission for "${submission.Assignment?.title || 'Assignment'}" has been graded with ${numericGrade}/100.`,
+        { submissionId: submission.id, assignmentId: submission.Assignment?.id }
+      );
+    } catch (notifErr) {
+      console.error('Homework grading notification error:', notifErr);
+    }
 
     res.json(submission);
   } catch (error) {

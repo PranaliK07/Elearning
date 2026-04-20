@@ -103,16 +103,17 @@ const QuizManagement = () => {
 
     return (
         <Container maxWidth="xl" sx={{ py: 4 }}>
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'flex-end' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
                 <Box>
                     <Typography variant="h4" fontWeight="bold" gutterBottom>Quiz Management</Typography>
                     <Typography variant="body1" color="textSecondary">Manage all interactive quizzes and student assessments</Typography>
                 </Box>
-                <Stack direction="row" spacing={2}>
+                <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
                     <Button 
                         variant="outlined" 
                         startIcon={<Refresh />} 
                         onClick={fetchAllQuizzes}
+                        sx={{ flex: { xs: 1, sm: '0 0 auto' } }}
                     >
                         Refresh
                     </Button>
@@ -120,6 +121,7 @@ const QuizManagement = () => {
                         variant="contained" 
                         startIcon={<QuizIcon />}
                         onClick={() => navigate('/content/create')}
+                        sx={{ flex: { xs: 1, sm: '0 0 auto' } }}
                     >
                         New Quiz
                     </Button>
@@ -139,13 +141,13 @@ const QuizManagement = () => {
                             </InputAdornment>
                         ),
                     }}
-                    sx={{ bgcolor: 'white' }}
+                    sx={{ '& .MuiInputBase-root': { bgcolor: 'background.paper' } }}
                 />
             </Paper>
 
-            <TableContainer component={Paper} sx={{ borderRadius: 4, boxShadow: 3, overflow: 'hidden' }}>
-                <Table>
-                    <TableHead sx={{ bgcolor: 'rgba(11,31,59,0.02)' }}>
+            <TableContainer component={Paper} sx={{ borderRadius: 4, boxShadow: 3, overflow: 'hidden', overflowX: 'auto' }}>
+                <Table sx={{ minWidth: 600 }}>
+                    <TableHead sx={{ bgcolor: 'action.hover' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 'bold', pl: 3 }}>Quiz Title</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Topic / Subject</TableCell>

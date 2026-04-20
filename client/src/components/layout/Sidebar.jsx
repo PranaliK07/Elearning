@@ -153,7 +153,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
       key: 'doubts', 
       text: role === 'teacher' ? 'Student Doubts' : 'Doubts', 
       icon: <DoubtIcon />, 
-      path: role === 'teacher' ? '/dashboard?tab=1' : '/doubts' 
+      path: '/doubts' 
     },
     { key: 'reports', text: 'Reports', icon: <ReportsIcon />, path: '/reports' },
     { key: 'reports-issues', text: 'Reports & Issues', icon: <ReportsIcon />, path: '/admin/reports' },
@@ -240,7 +240,7 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
           </Typography>
           <Chip
             icon={<StarIcon />}
-            label={user?.role === 'student' ? `${user?.points || 0} Daily Stars` : `${user?.points || 0} Points`}
+            label={user?.role === 'student' ? `${user?.points || 0} Today's Stars` : `${user?.points || 0} Points`}
             size="small"
             color="primary"
             sx={{ mt: 1 }}
@@ -291,23 +291,33 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
           </ListItem>
         ))}
         <Divider sx={{ my: 1 }} />
-        <ListItem disablePadding>
+        <ListItem disablePadding sx={{ mt: 'auto', mb: 2 }}>
           <ListItemButton
             onClick={handleLogoutClick}
             sx={{
-              color: 'error.main',
-              '& .MuiListItemIcon-root': {
-                color: 'error.main'
+              width: '100% !important',
+              backgroundColor: '#8b0000 !important',
+              color: '#FFFFFF !important',
+              borderRadius: '0px !important',
+              py: 1.5,
+              '& *': {
+                color: '#FFFFFF !important',
               },
               '&:hover': {
-                backgroundColor: 'rgba(211, 47, 47, 0.08)'
-              }
+                backgroundColor: '#5d0000 !important'
+              },
+              transition: 'all 0.2s'
             }}
           >
-            <ListItemIcon>
-              <LogoutIcon />
+            <ListItemIcon sx={{ color: '#FFFFFF !important', minWidth: 40, ml: 1 }}>
+              <LogoutIcon sx={{ color: '#FFFFFF !important' }} />
             </ListItemIcon>
-            <ListItemText primary="Logout" />
+            <ListItemText 
+              primary="Logout" 
+              primaryTypographyProps={{ 
+                sx: { color: '#FFFFFF !important', fontWeight: 'bold !important' } 
+              }} 
+            />
           </ListItemButton>
         </ListItem>
       </List>
@@ -346,7 +356,9 @@ const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
             boxSizing: 'border-box',
             width: drawerWidth,
             mt: `${appBarHeights.sm}px`,
-            height: `calc(100% - ${appBarHeights.sm}px)`
+            height: `calc(100% - ${appBarHeights.sm}px)`,
+            borderRight: 'none',
+            boxShadow: '4px 0 10px rgba(0,0,0,0.03)'
           },
         }}
         open
